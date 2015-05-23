@@ -6,9 +6,10 @@
     <title>$title$</title>
     <authors>Pablo Ferraris</authors>
     <licenseUrl>https://raw.githubusercontent.com/pferraris/LinkupSharp/master/LICENSE</licenseUrl>
+	<projectUrl>https://github.com/pferraris/LinkupSharp</projectUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>$description$</description>
-    <releaseNotes>Complete platform implementation.</releaseNotes>
+    <releaseNotes></releaseNotes>
     <copyright>Copyright 2015</copyright>
     <tags>Communication Platform Linkup</tags>
   </metadata>

@@ -56,7 +56,7 @@ namespace LinkupSharp.Modules
 
         private bool HandleAuthenticated(Packet packet, ClientConnection client)
         {
-            client.OnAuthenticated(packet.GetContent<Authenticated>().AuthenticationContext);
+            client.OnAuthenticated(packet.GetContent<Authenticated>().SessionContext);
             return true;
         }
 

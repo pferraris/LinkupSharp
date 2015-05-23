@@ -64,7 +64,7 @@ namespace LinkupSharp
         {
             listeners = new List<IChannelListener>();
             authenticators = new List<IAuthenticator>();
-            interceptors = new List<IServerModule>();
+            modules = new List<IServerModule>();
 
             clients = new Dictionary<string, ClientConnection>();
             pendings = new Dictionary<ClientConnection, DateTime>();
@@ -89,7 +89,7 @@ namespace LinkupSharp
         {
             ClearListeners();
             ClearAuthenticators();
-            ClearInterceptors();
+            ClearModules();
             ckeckingAuthenticationTimeOut = false;
             checkAuthentication.Wait();
             checkAuthentication.Dispose();
@@ -172,33 +172,33 @@ namespace LinkupSharp
 
         #region Modules
 
-        private List<IServerModule> interceptors;
-        public ReadOnlyCollection<IServerModule> Interceptors
+        private List<IServerModule> modules;
+        public ReadOnlyCollection<IServerModule> Modules
         {
-            get { return interceptors.AsReadOnly(); }
+            get { return modules.AsReadOnly(); }
         }
 
-        public void AddInterceptor(IServerModule interceptor)
+        public void AddModule(IServerModule module)
         {
-            if (interceptor == null) throw new ArgumentNullException("Interceptor cannot be null.");
-            if (!interceptors.Contains(interceptor))
+            if (module == null) throw new ArgumentNullException("Module cannot be null.");
+            if (!modules.Contains(module))
             {
-                interceptors.Add(interceptor);
-                interceptor.OnAdded(this);
+                modules.Add(module);
+                module.OnAdded(this);
             }
         }
 
-        public void RemoveInterceptor(IServerModule interceptor)
+        public void RemoveModule(IServerModule module)
         {
-            if (interceptor == null) throw new ArgumentNullException("Interceptor cannot be null.");
-            if (interceptors.Contains(interceptor))
-                interceptors.Remove(interceptor);
+            if (module == null) throw new ArgumentNullException("Module cannot be null.");
+            if (modules.Contains(module))
+                modules.Remove(module);
         }
 
-        public void ClearInterceptors()
+        public void ClearModules()
         {
-            foreach (var interceptor in Interceptors.ToArray())
-                RemoveInterceptor(interceptor);
+            foreach (var module in Modules.ToArray())
+                RemoveModule(module);
         }
 
         #endregion Modules
@@ -311,8 +311,8 @@ namespace LinkupSharp
 
         private void client_PacketReceived(object sender, PacketEventArgs e)
         {
-            foreach (var interceptor in Interceptors)
-                if (interceptor.Process(e.Packet, sender as ClientConnection, this))
+            foreach (var module in Modules)
+                if (module.Process(e.Packet, sender as ClientConnection, this))
                     return;
 
             if (e.Packet.Recipient == null)

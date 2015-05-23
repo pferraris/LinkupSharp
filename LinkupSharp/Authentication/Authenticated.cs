@@ -31,16 +31,16 @@ namespace LinkupSharp.Authentication
 {
     public class Authenticated
     {
-        public SessionContext AuthenticationContext { get; private set; }
+        public SessionContext SessionContext { get; private set; }
 
-        public Authenticated(SessionContext authenticationContext)
+        public Authenticated(SessionContext sessionContext)
         {
-            AuthenticationContext = authenticationContext;
+            SessionContext = sessionContext;
         }
 
         public override string ToString()
         {
-            return AuthenticationContext.ToString();
+            return SessionContext.ToString();
         }
     }
 }

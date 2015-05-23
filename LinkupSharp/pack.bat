@@ -1,0 +1,1 @@
+nuget pack LinkupSharp.csproj -Prop Configuration=Release

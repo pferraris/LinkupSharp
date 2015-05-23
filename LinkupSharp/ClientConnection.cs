@@ -52,33 +52,33 @@ namespace LinkupSharp
             IsConnected = false;
             sessionModule = new SessionModule();
             SessionContext = null;
-            interceptors = new List<IClientModule>();
+            modules = new List<IClientModule>();
         }
 
         #region Modules
 
         private SessionModule sessionModule;
-        private List<IClientModule> interceptors;
-        public ReadOnlyCollection<IClientModule> Interceptors
+        private List<IClientModule> modules;
+        public ReadOnlyCollection<IClientModule> Modules
         {
-            get { return interceptors.AsReadOnly(); }
+            get { return modules.AsReadOnly(); }
         }
 
-        public void AddInterceptor(IClientModule interceptor)
+        public void AddModule(IClientModule module)
         {
-            if (interceptor == null) throw new ArgumentNullException("Interceptor cannot be null.");
-            if (!interceptors.Contains(interceptor))
+            if (module == null) throw new ArgumentNullException("Module cannot be null.");
+            if (!modules.Contains(module))
             {
-                interceptors.Add(interceptor);
-                interceptor.OnAdded(this);
+                modules.Add(module);
+                module.OnAdded(this);
             }
         }
 
-        public void RemoveInterceptor(IClientModule interceptor)
+        public void RemoveModule(IClientModule module)
         {
-            if (interceptor == null) throw new ArgumentNullException("Interceptor cannot be null.");
-            if (interceptors.Contains(interceptor))
-                interceptors.Remove(interceptor);
+            if (module == null) throw new ArgumentNullException("Module cannot be null.");
+            if (modules.Contains(module))
+                modules.Remove(module);
         }
 
         #endregion Modules
@@ -90,8 +90,8 @@ namespace LinkupSharp
             if (sessionModule.Process(e.Packet, this))
                 return;
 
-            foreach (var interceptor in Interceptors)
-                if (interceptor.Process(e.Packet, this))
+            foreach (var module in Modules)
+                if (module.Process(e.Packet, this))
                     return;
 
             OnPacketReceived(e);
@@ -135,13 +135,13 @@ namespace LinkupSharp
             Send(new Connected());
         }
 
-        internal bool Authenticate(SessionContext authenticationContext)
+        internal bool Authenticate(SessionContext sessionContext)
         {
-            if (authenticationContext != null)
+            if (sessionContext != null)
             {
                 serverSide = true;
-                SessionContext = authenticationContext;
-                Send(new Authenticated(authenticationContext));
+                SessionContext = sessionContext;
+                Send(new Authenticated(sessionContext));
                 return true;
             }
             return false;
