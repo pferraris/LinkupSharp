@@ -1,6 +1,6 @@
 # LinkupSharp #
 
-LinkupSharp es una librería extensible y flexible, para intercomunicar aplicaciones de manera bidireccional.
+LinkupSharp es una plataforma de comunicación bidireccional de aplicaciones, diseñada para ser cómodamente extensible y flexible.
 
 Actualmente no está implementado, pero se planea tener librerías clientes para Java, para poder conectar aplicaciones Android, y JavaScript para poder conectar páginas web.
 
@@ -22,8 +22,9 @@ La implementaciones de IChannelListener incluidas en el core son:
 - `TcpChannelListener` para comunicaciones TCP estándar.
 - `SslChannelListener` para comunicaciones TCP/SSL mediante un certificado.
 - `WebChannelListener` que simula bidireccionalidad a través de HTTP requests GET y POST.
+- `WebSocketChannelListener` para comunicaciones mediante WebSockets.
 
-Además se está trabajando en una implementación `WebSocketChannelListener` y se planea realizar una implementación que funcione a través de POP3/SMTP `EmailChannelListener`
+Además se planea realizar una implementación experimental que funcione a través de POP3/SMTP llamada `EmailChannelListener`.
 
 Cada una de las implementaciones de IChannelListener está acompañada de una implementación de IClientChannel que representa cada uno de los extremos conectados.
 El objetivo de IChannelListener es la de reportar al ConnectionManager cada vez que un cliente se conecta a través de un evento, entregando un IClientChannel.
@@ -32,6 +33,7 @@ Así tenemos las implementaciones:
 - `TcpClientChannel`
 - `SslClientChannel`
 - `WebClientChannel`
+- `WebSocketClientChannel`
 
 ### Clientes conectados ###
 

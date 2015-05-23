@@ -35,11 +35,11 @@ using System.Runtime.InteropServices;
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
 [assembly: AssemblyTitle("LinkupSharp")]
-[assembly: AssemblyDescription("")]
+[assembly: AssemblyDescription("LinkupSharp es una plataforma de comunicación bidireccional de aplicaciones, diseñada para ser cómodamente extensible y flexible.")]
 [assembly: AssemblyConfiguration("")]
 [assembly: AssemblyCompany("")]
 [assembly: AssemblyProduct("LinkupSharp")]
-[assembly: AssemblyCopyright("Copyright ©  2014")]
+[assembly: AssemblyCopyright("Copyright ©  2015")]
 [assembly: AssemblyTrademark("")]
 [assembly: AssemblyCulture("")]
 
