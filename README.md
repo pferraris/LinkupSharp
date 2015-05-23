@@ -1,7 +1,6 @@
-# DotNetConnect #
------------------
+# LinkupSharp #
 
-DotNetConnect es una librería extensible y flexible, para intercomunicar aplicaciones Mono/.NET de manera bidireccional.
+LinkupSharp es una librería extensible y flexible, para intercomunicar aplicaciones de manera bidireccional.
 
 Actualmente no está implementado, pero se planea tener librerías clientes para Java, para poder conectar aplicaciones Android, y JavaScript para poder conectar páginas web.
 
