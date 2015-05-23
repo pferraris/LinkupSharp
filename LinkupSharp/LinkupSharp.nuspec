@@ -1,0 +1,15 @@
+<?xml version="1.0"?>
+<package >
+  <metadata>
+    <id>$id$</id>
+    <version>$version$</version>
+    <title>$title$</title>
+    <authors>Pablo Ferraris</authors>
+    <licenseUrl>https://raw.githubusercontent.com/pferraris/LinkupSharp/master/LICENSE</licenseUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>$description$</description>
+    <releaseNotes>Complete platform implementation.</releaseNotes>
+    <copyright>Copyright 2015</copyright>
+    <tags>Communication Platform Linkup</tags>
+  </metadata>
+</package>
