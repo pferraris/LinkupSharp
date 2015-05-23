@@ -1,0 +1,109 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="12.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{83453473-BEC5-4D8C-B203-01C937297EB6}</ProjectGuid>
+    <OutputType>Library</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>LinkupSharp</RootNamespace>
+    <AssemblyName>LinkupSharp</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <ItemGroup>
+    <Reference Include="Newtonsoft.Json, Version=6.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>..\..\NeoSueldos.Engine\packages\Newtonsoft.Json.6.0.8\lib\net45\Newtonsoft.Json.dll</HintPath>
+    </Reference>
+    <Reference Include="System" />
+    <Reference Include="System.Core" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="Authentication\Authenticated.cs" />
+    <Compile Include="Authentication\AuthenticationFailed.cs" />
+    <Compile Include="Authentication\AnonymousAuthenticator.cs" />
+    <Compile Include="Authentication\Credentials.cs" />
+    <Compile Include="Authentication\IAuthenticator.cs" />
+    <Compile Include="Channels\IChannelListener.cs" />
+    <Compile Include="Channels\IClientChannel.cs" />
+    <Compile Include="Channels\SslChannelListener.cs" />
+    <Compile Include="Channels\SslClientChannel.cs" />
+    <Compile Include="Channels\WebChannelListener.cs" />
+    <Compile Include="Channels\WebClientChannel.cs" />
+    <Compile Include="Channels\WebSocketChannelListener.cs" />
+    <Compile Include="Channels\WebSocketClientChannel.cs" />
+    <Compile Include="ClientConnection.cs" />
+    <Compile Include="ClientConnectionEventArgs.cs" />
+    <Compile Include="Disconnected.cs" />
+    <Compile Include="DisconnectedEventArgs.cs" />
+    <Compile Include="Connected.cs" />
+    <Compile Include="ConnectionManager.cs" />
+    <Compile Include="Authentication\SessionContext.cs" />
+    <Compile Include="Authentication\CredentialsEventArgs.cs" />
+    <Compile Include="Modules\AuthorizedAttribute.cs" />
+    <Compile Include="Modules\AuthenticatedAttribute.cs" />
+    <Compile Include="Modules\IClientModule.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Modules\IServerModule.cs">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="Loggers\Logger.cs" />
+    <Compile Include="Properties\Settings.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <DependentUpon>Settings.settings</DependentUpon>
+    </Compile>
+    <Compile Include="Serializers\IPacketSerializer.cs" />
+    <Compile Include="Modules\SessionModule.cs" />
+    <Compile Include="Modules\ClientConsoleLoggerModule.cs" />
+    <Compile Include="Modules\ServerConsoleLoggerModule.cs" />
+    <Compile Include="Modules\ClientModule.cs" />
+    <Compile Include="Modules\ServerModule.cs" />
+    <Compile Include="Packet.cs" />
+    <Compile Include="PacketEventArgs.cs" />
+    <Compile Include="Channels\ClientChannelEventArgs.cs" />
+    <Compile Include="Channels\TcpChannelListener.cs" />
+    <Compile Include="Channels\TcpClientChannel.cs" />
+    <Compile Include="Id.cs" />
+    <Compile Include="Serializers\JsonPacketSerializer.cs" />
+    <Compile Include="Serializers\PacketSerializerBase.cs" />
+    <Compile Include="Properties\AssemblyInfo.cs" />
+  </ItemGroup>
+  <ItemGroup />
+  <ItemGroup>
+    <None Include="app.config" />
+    <None Include="packages.config" />
+    <None Include="Properties\Settings.settings">
+      <Generator>SettingsSingleFileGenerator</Generator>
+      <LastGenOutput>Settings.Designer.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
