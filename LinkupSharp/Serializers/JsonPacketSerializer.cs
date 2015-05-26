@@ -36,12 +36,12 @@ namespace LinkupSharp.Serializers
     {
         protected override Packet Bytes2Packet(byte[] packet)
         {
-            return JsonConvert.DeserializeObject<Packet>(Encoding.Default.GetString(packet));
+            return JsonConvert.DeserializeObject<Packet>(Encoding.UTF8.GetString(packet));
         }
 
         protected override byte[] Packet2Bytes(Packet packet)
         {
-            return Encoding.Default.GetBytes(JsonConvert.SerializeObject(packet));
+            return Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(packet));
         }
     }
 }
