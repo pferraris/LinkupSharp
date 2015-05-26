@@ -2,7 +2,7 @@
 
 LinkupSharp es una plataforma de comunicación bidireccional de aplicaciones, diseñada para ser cómodamente extensible y flexible.
 
-Actualmente no está implementado, pero se planea tener librerías clientes para Java, para poder conectar aplicaciones Android, y JavaScript para poder conectar páginas web.
+Se está trabajando en una implementación JavaScript con AngularJS, para conectar páginas web: [ngLinkup](https://github.com/pferraris/ngLinkup)
 
 ## ConnectionManager ##
 Es el núcleo de la librería se encarga de esperar conexiones a través de distintos canales, gestionar las conexiones cliente, y gestionar el intercambio de paquetes entre ellos.
