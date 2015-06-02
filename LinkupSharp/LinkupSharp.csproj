@@ -46,7 +46,10 @@
     <Compile Include="Authentication\AuthenticationFailed.cs" />
     <Compile Include="Authentication\AnonymousAuthenticator.cs" />
     <Compile Include="Authentication\Credentials.cs" />
+    <Compile Include="Authentication\ISessionRepository.cs" />
+    <Compile Include="Authentication\SessionContextEventArgs.cs" />
     <Compile Include="Authentication\IAuthenticator.cs" />
+    <Compile Include="Authentication\MemorySessionRepository.cs" />
     <Compile Include="Channels\IChannelListener.cs" />
     <Compile Include="Channels\IClientChannel.cs" />
     <Compile Include="Channels\SslChannelListener.cs" />

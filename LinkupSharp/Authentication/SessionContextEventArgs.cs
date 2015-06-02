@@ -28,27 +28,16 @@
 #endregion License
 
 using System;
+
 namespace LinkupSharp.Authentication
 {
-    public class SessionContext
+    public class SessionContextEventArgs : EventArgs
     {
-        public Id Id { get; private set; }
-        public string Token { get; private set; }
+        public SessionContext SessionContext { get; private set; }
 
-        public SessionContext(Id id)
+        public SessionContextEventArgs(SessionContext sessionContext)
         {
-            Id = id;
-            Token = Guid.NewGuid().ToString();
-        }
-
-        public virtual bool IsInRole(params object[] roles)
-        {
-            return false;
-        }
-
-        public override string ToString()
-        {
-            return Id;
+            SessionContext = sessionContext;
         }
     }
 }

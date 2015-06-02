@@ -44,15 +44,16 @@ namespace LinkupSharp
     public class ConnectionManager : IDisposable
     {
         public TimeSpan AuthenticationTimeOut { get; set; }
-        private Dictionary<ClientConnection, DateTime> pendings;
+        private Dictionary<ClientConnection, DateTime> anonymous;
         private bool ckeckingAuthenticationTimeOut;
         private Task checkAuthentication;
 
         public TimeSpan InactivityTimeOut { get; set; }
-        private Dictionary<ClientConnection, DateTime> disconnected;
+        private Dictionary<ClientConnection, DateTime> inactives;
         private bool ckeckingInactivityTimeOut;
         private Task checkInactivity;
 
+        private ISessionRepository sessions;
 
         private Dictionary<string, ClientConnection> clients;
         public ReadOnlyDictionary<string, ClientConnection> Clients
@@ -67,8 +68,10 @@ namespace LinkupSharp
             modules = new List<IServerModule>();
 
             clients = new Dictionary<string, ClientConnection>();
-            pendings = new Dictionary<ClientConnection, DateTime>();
-            disconnected = new Dictionary<ClientConnection, DateTime>();
+            anonymous = new Dictionary<ClientConnection, DateTime>();
+            inactives = new Dictionary<ClientConnection, DateTime>();
+
+            sessions = new MemorySessionRepository();
 
             AuthenticationTimeOut = Settings.Default.AuthenticationTimeOut;
             if (AuthenticationTimeOut.TotalMilliseconds > 0)
@@ -93,7 +96,7 @@ namespace LinkupSharp
             ckeckingAuthenticationTimeOut = false;
             checkAuthentication.Wait();
             checkAuthentication.Dispose();
-            foreach (var item in pendings.Keys.ToArray())
+            foreach (var item in anonymous.Keys.ToArray())
                 item.Disconnect();
             ckeckingInactivityTimeOut = false;
             checkInactivity.Wait();
@@ -211,12 +214,12 @@ namespace LinkupSharp
             {
                 try
                 {
-                    lock (pendings)
-                        while (pendings.Any(x => (DateTime.Now - x.Value) > AuthenticationTimeOut))
+                    lock (anonymous)
+                        while (anonymous.Any(x => (DateTime.Now - x.Value) > AuthenticationTimeOut))
                         {
-                            var item = pendings.First(x => (DateTime.Now - x.Value) > AuthenticationTimeOut);
+                            var item = anonymous.First(x => (DateTime.Now - x.Value) > AuthenticationTimeOut);
                             item.Key.Disconnect(Reasons.AuthenticationTimeOut);
-                            pendings.Remove(item.Key);
+                            anonymous.Remove(item.Key);
                         }
                     Thread.Sleep(1000);
                 }
@@ -233,14 +236,14 @@ namespace LinkupSharp
             {
                 try
                 {
-                    lock (disconnected)
-                        while (disconnected.Any(x => (DateTime.Now - x.Value) > InactivityTimeOut))
+                    lock (inactives)
+                        while (inactives.Any(x => (DateTime.Now - x.Value) > InactivityTimeOut))
                         {
-                            var item = disconnected.First(x => (DateTime.Now - x.Value) > InactivityTimeOut);
+                            var item = inactives.First(x => (DateTime.Now - x.Value) > InactivityTimeOut);
                             lock (clients)
                                 if (clients.ContainsKey(item.Key.Id))
                                     clients.Remove(item.Key.Id);
-                            disconnected.Remove(item.Key);
+                            inactives.Remove(item.Key);
                             OnClientDisconnected(item.Key, item.Key.Id);
                         }
                     Thread.Sleep(1000);
@@ -256,11 +259,12 @@ namespace LinkupSharp
         {
             ClientConnection client = new ClientConnection();
             client.AuthenticationRequired += client_AuthenticationRequired;
+            client.RestoreSessionRequired += client_RestoreSessionRequired;
             client.PacketReceived += client_PacketReceived;
             client.Disconnected += client_Disconnected;
             client.Connect(e.ClientChannel);
-            lock (pendings)
-                pendings.Add(client, DateTime.Now);
+            lock (anonymous)
+                anonymous.Add(client, DateTime.Now);
             client.RequireCredentials();
         }
 
@@ -270,14 +274,16 @@ namespace LinkupSharp
             ClientConnection oldClient = null;
             Id currentId = client.Id;
             foreach (var authenticator in Authenticators)
+            {
                 if (client.Authenticate(authenticator.Authenticate(e.Credentials)))
                 {
+                    sessions.Add(client.SessionContext);
                     // Si se esta abriendo una sesión ya existente, pero con otra conexión. Debe desconectar la existente.
                     if ((clients.ContainsKey(client.Id)) && (clients[client.Id] != client))
                     {
                         oldClient = clients[client.Id];
-                        if (disconnected.ContainsKey(oldClient))
-                            disconnected.Remove(oldClient);
+                        if (inactives.ContainsKey(oldClient))
+                            inactives.Remove(oldClient);
                         else
                             oldClient.Disconnect(Reasons.AnotherSessionOpened);
                         clients.Remove(client.Id);
@@ -301,12 +307,41 @@ namespace LinkupSharp
                             OnClientReconnected(client, client.Id);
                     }
                     // En caso de estar el cliente en la lista de pendientes, lo quita.
-                    if (pendings.ContainsKey(client))
-                        lock (pendings)
-                            pendings.Remove(client);
+                    if (anonymous.ContainsKey(client))
+                        lock (anonymous)
+                            anonymous.Remove(client);
                     return;
                 }
+            }
             client.Send(new AuthenticationFailed(e.Credentials.Id));
+        }
+
+        void client_RestoreSessionRequired(object sender, SessionContextEventArgs e)
+        {
+            ClientConnection client = sender as ClientConnection;
+            SessionContext session = sessions.Get(e.SessionContext.Id);
+            if (session.Token == e.SessionContext.Token)
+            {
+                ClientConnection oldClient = null;
+                if ((clients.ContainsKey(client.Id)) && (clients[client.Id] != client))
+                {
+                    oldClient = clients[client.Id];
+                    if (inactives.ContainsKey(oldClient))
+                    {
+                        lock (inactives)
+                            inactives.Remove(oldClient);
+                        lock (clients)
+                        {
+                            clients.Remove(client.Id);
+                            clients.Add(client.Id, client);
+                        }
+                        client.Authenticate(session);
+                        OnClientReconnected(client, client.Id);
+                        return;
+                    }
+                }
+            }
+            client.Send(new AuthenticationFailed(e.SessionContext.Id));
         }
 
         private void client_PacketReceived(object sender, PacketEventArgs e)
@@ -332,15 +367,15 @@ namespace LinkupSharp
                 case Reasons.AnotherSessionOpened:
                     break;
                 case Reasons.AuthenticationTimeOut:
-                    if (pendings.ContainsKey(client))
-                        lock (pendings)
-                            pendings.Remove(client);
+                    if (anonymous.ContainsKey(client))
+                        lock (anonymous)
+                            anonymous.Remove(client);
                     break;
                 default:
-                    if ((clients.ContainsKey(client.Id)) && (!disconnected.ContainsKey(client)))
+                    if ((clients.ContainsKey(client.Id)) && (!inactives.ContainsKey(client)))
                     {
-                        lock (disconnected)
-                            disconnected.Add(client, DateTime.Now);
+                        lock (inactives)
+                            inactives.Add(client, DateTime.Now);
                         OnClientInactive(client, client.Id);
                     }
                     break;
@@ -383,6 +418,7 @@ namespace LinkupSharp
 
         protected virtual void OnClientDisconnected(ClientConnection client, Id id)
         {
+            sessions.Remove(client.SessionContext);
             if (ClientDisconnected != null)
                 ClientDisconnected(this, new ClientConnectionEventArgs(client, id));
         }

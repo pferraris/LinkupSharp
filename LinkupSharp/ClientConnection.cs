@@ -200,6 +200,7 @@ namespace LinkupSharp
 
         public event EventHandler<PacketEventArgs> PacketReceived;
         public event EventHandler<CredentialsEventArgs> AuthenticationRequired;
+        public event EventHandler<SessionContextEventArgs> RestoreSessionRequired;
         public event EventHandler<EventArgs> Connected;
         public event EventHandler<EventArgs> Authenticated;
         public event EventHandler<EventArgs> AuthenticationFailed;
@@ -232,6 +233,12 @@ namespace LinkupSharp
         {
             if (AuthenticationRequired != null)
                 AuthenticationRequired(this, new CredentialsEventArgs(credentials));
+        }
+
+        protected internal void OnRestoreSessionRequired(SessionContext sessionContext)
+        {
+            if (RestoreSessionRequired != null)
+                RestoreSessionRequired(this, new SessionContextEventArgs(sessionContext));
         }
 
         protected internal virtual void OnAuthenticated(SessionContext sessionContext)

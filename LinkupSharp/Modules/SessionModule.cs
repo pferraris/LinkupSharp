@@ -36,6 +36,7 @@ namespace LinkupSharp.Modules
         public SessionModule()
         {
             RegisterHandler<Credentials>(HandleCredentials); // Only Server Side
+            RegisterHandler<SessionContext>(HandleSessionContext); // Only Server Side
             RegisterHandler<Connected>(HandleConnected); // Only Client Side
             RegisterHandler<Authenticated>(HandleAuthenticated); // Only Client Side
             RegisterHandler<AuthenticationFailed>(HandleAuthenticationFailed); // Only Client Side
@@ -45,6 +46,12 @@ namespace LinkupSharp.Modules
         private bool HandleCredentials(Packet packet, ClientConnection client)
         {
             client.OnAuthenticationRequired(packet.GetContent() as Credentials);
+            return true;
+        }
+
+        private bool HandleSessionContext(Packet packet, ClientConnection client)
+        {
+            client.OnRestoreSessionRequired(packet.GetContent<SessionContext>());
             return true;
         }
 
