@@ -244,6 +244,7 @@ namespace LinkupSharp
                                 if (clients.ContainsKey(item.Key.Id))
                                     clients.Remove(item.Key.Id);
                             inactives.Remove(item.Key);
+                            sessions.Remove(item.Key.SessionContext);
                             OnClientDisconnected(item.Key, item.Key.Id);
                         }
                     Thread.Sleep(1000);
@@ -278,33 +279,39 @@ namespace LinkupSharp
                 if (client.Authenticate(authenticator.Authenticate(e.Credentials)))
                 {
                     sessions.Add(client.SessionContext);
-                    // Si se esta abriendo una sesión ya existente, pero con otra conexión. Debe desconectar la existente.
-                    if ((clients.ContainsKey(client.Id)) && (clients[client.Id] != client))
+                    lock (clients)
                     {
-                        oldClient = clients[client.Id];
-                        if (inactives.ContainsKey(oldClient))
-                            inactives.Remove(oldClient);
-                        else
-                            oldClient.Disconnect(Reasons.AnotherSessionOpened);
-                        clients.Remove(client.Id);
-                    }
-                    // Si se trata de un cambio de usuario, debe quitar el Id viejo de la lista de clientes.
-                    if ((currentId != null) && (!currentId.Equals(client.Id)))
-                        if (clients.ContainsKey(currentId))
+                        // Si se esta abriendo una nueva sesión para un usuario conectado, pero con otra conexión. Debe desconectar la existente.
+                        if ((clients.ContainsKey(client.Id)) && (clients[client.Id] != client))
+                        {
+                            oldClient = clients[client.Id];
+                            sessions.Remove(oldClient.SessionContext);
+                            lock (inactives)
+                                if (inactives.ContainsKey(oldClient))
+                                    inactives.Remove(oldClient);
+                                else
+                                    oldClient.Disconnect(Reasons.AnotherSessionOpened);
+                            clients.Remove(client.Id);
+                        }
+                        // Si se trata de un cambio de usuario, debe quitar el Id viejo de la lista de clientes.
+                        if ((currentId != null) && (!currentId.Equals(client.Id)))
+                            if (clients.ContainsKey(currentId))
+                            {
+                                sessions.Remove(clients[currentId].SessionContext);
+                                lock (clients)
+                                    clients.Remove(currentId);
+                                OnClientDisconnected(client, currentId);
+                            }
+                        // En caso de no estar el Id en la lista de clientes lo agrega.
+                        if (!clients.ContainsKey(client.Id))
                         {
                             lock (clients)
-                                clients.Remove(currentId);
-                            OnClientDisconnected(client, currentId);
+                                clients.Add(client.Id, client);
+                            if (oldClient == null)
+                                OnClientConnected(client, client.Id);
+                            else
+                                OnClientReconnected(client, client.Id);
                         }
-                    // En caso de no estar el Id en la lista de clientes lo agrega.
-                    if (!clients.ContainsKey(client.Id))
-                    {
-                        lock (clients)
-                            clients.Add(client.Id, client);
-                        if (oldClient == null)
-                            OnClientConnected(client, client.Id);
-                        else
-                            OnClientReconnected(client, client.Id);
                     }
                     // En caso de estar el cliente en la lista de pendientes, lo quita.
                     if (anonymous.ContainsKey(client))
@@ -367,17 +374,24 @@ namespace LinkupSharp
                 case Reasons.AnotherSessionOpened:
                     break;
                 case Reasons.AuthenticationTimeOut:
-                    if (anonymous.ContainsKey(client))
-                        lock (anonymous)
+                    lock (anonymous)
+                        if (anonymous.ContainsKey(client))
                             anonymous.Remove(client);
                     break;
-                default:
+                case Reasons.ConnectionLost:
                     if ((clients.ContainsKey(client.Id)) && (!inactives.ContainsKey(client)))
                     {
                         lock (inactives)
                             inactives.Add(client, DateTime.Now);
                         OnClientInactive(client, client.Id);
                     }
+                    break;
+                default:
+                    lock (clients)
+                        if (clients.ContainsKey(client.Id))
+                            clients.Remove(client.Id);
+                    sessions.Remove(client.SessionContext);
+                    OnClientDisconnected(client, client.Id);
                     break;
             }
         }
@@ -418,7 +432,6 @@ namespace LinkupSharp
 
         protected virtual void OnClientDisconnected(ClientConnection client, Id id)
         {
-            sessions.Remove(client.SessionContext);
             if (ClientDisconnected != null)
                 ClientDisconnected(this, new ClientConnectionEventArgs(client, id));
         }
