@@ -31,10 +31,10 @@ using LinkupSharp.Authentication;
 using LinkupSharp.Channels;
 using LinkupSharp.Loggers;
 using LinkupSharp.Modules;
-using LinkupSharp.Properties;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Configuration;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
@@ -73,14 +73,22 @@ namespace LinkupSharp
 
             sessions = new MemorySessionRepository();
 
-            AuthenticationTimeOut = Settings.Default.AuthenticationTimeOut;
+            string authenticationTimeOut = ConfigurationManager.AppSettings.Get("AuthenticationTimeOut");
+            if (String.IsNullOrEmpty(authenticationTimeOut))
+                AuthenticationTimeOut = TimeSpan.Zero;
+            else
+                AuthenticationTimeOut = TimeSpan.Parse(authenticationTimeOut);
             if (AuthenticationTimeOut.TotalMilliseconds > 0)
             {
                 ckeckingAuthenticationTimeOut = true;
                 checkAuthentication = Task.Factory.StartNew(CheckAuthentication);
             }
 
-            InactivityTimeOut = Settings.Default.InactivityTimeOut;
+            string inactivityTimeOut = ConfigurationManager.AppSettings.Get("InactivityTimeOut");
+            if (String.IsNullOrEmpty(inactivityTimeOut))
+                InactivityTimeOut = TimeSpan.FromMinutes(1);
+            else
+                InactivityTimeOut = TimeSpan.Parse(inactivityTimeOut);
             if (InactivityTimeOut.TotalMilliseconds > 0)
             {
                 ckeckingInactivityTimeOut = true;
