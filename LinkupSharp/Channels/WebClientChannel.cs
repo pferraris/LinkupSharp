@@ -44,7 +44,7 @@ namespace LinkupSharp.Channels
         private Task readingTask;
         private bool active;
         private bool serverSide;
-        private List<byte> pending;
+        private Queue<Packet> pending;
         private int poolingTime;
         private Timer inactivityTimer;
         private int inactivityTime;
@@ -64,7 +64,7 @@ namespace LinkupSharp.Channels
             serializer = new JsonPacketSerializer();
             inactivityTime = 5000;
             inactivityTimer = new Timer(InactivityCheck, null, inactivityTime, Timeout.Infinite);
-            pending = new List<byte>();
+            pending = new Queue<Packet>();
         }
 
         public WebClientChannel(string address)
@@ -92,11 +92,7 @@ namespace LinkupSharp.Channels
         {
             inactivityTimer.Change(inactivityTime, Timeout.Infinite);
             lock (pending)
-            {
-                byte[] buffer = pending.ToArray();
-                if (pending.Any()) pending.Clear();
-                return buffer;
-            }
+                return serializer.Serialize(pending.Dequeue());
         }
 
         private void Read()
@@ -137,14 +133,14 @@ namespace LinkupSharp.Channels
 
         public void Send(Packet packet)
         {
-            byte[] buffer = serializer.Serialize(packet);
             if (serverSide)
                 lock (pending)
-                    pending.AddRange(buffer);
+                    pending.Enqueue(packet);
             else if (active)
             {
                 try
                 {
+                    byte[] buffer = serializer.Serialize(packet);
                     var webRequest = HttpWebRequest.Create(Address) as HttpWebRequest;
                     webRequest.ContentType = "text/plain";
                     webRequest.Headers.Add("ClientId", Id);
@@ -208,15 +204,13 @@ namespace LinkupSharp.Channels
         private void OnPacketReceived(Packet packet)
         {
             if (PacketReceived != null)
-                Task.Factory.StartNew(() =>
-                PacketReceived(this, new PacketEventArgs(packet)));
+                PacketReceived(this, new PacketEventArgs(packet));
         }
 
         private void OnClosed()
         {
             if (Closed != null)
-                Task.Factory.StartNew(() =>
-                Closed(this, EventArgs.Empty));
+                Closed(this, EventArgs.Empty);
         }
 
         #endregion Events
