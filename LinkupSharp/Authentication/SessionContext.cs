@@ -35,10 +35,10 @@ namespace LinkupSharp.Authentication
         public Id Id { get; private set; }
         public string Token { get; private set; }
 
-        public SessionContext(Id id)
+        public SessionContext(Id id, string token = null)
         {
             Id = id;
-            Token = Guid.NewGuid().ToString();
+            Token = token ?? Guid.NewGuid().ToString();
         }
 
         public virtual bool IsInRole(params object[] roles)
