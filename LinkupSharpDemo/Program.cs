@@ -13,20 +13,29 @@ namespace LinkupSharpDemo
         {
             var server = new TestServer();
             server.AddListener(new TcpChannelListener(5656));
+            server.AddListener(new WebChannelListener("http://+:5657/"));
+            server.AddListener(new WebSocketChannelListener("http://+:5658/"));
 
             var client1 = new TestClient();
             client1.Connected += (sender, e) => (sender as TestClient).Authenticate("client1@test");
             client1.Authenticated += client1_Authenticated;
-            client1.Connect(new TcpClientChannel("localhost", 5656));
+            client1.Connect(CreateChannel());
             Console.ReadLine();
         }
 
-        static void client1_Authenticated(object sender, EventArgs e)
+        private static IClientChannel CreateChannel()
+        {
+            return new TcpClientChannel("localhost", 5656);
+            //return new WebClientChannel("http://localhost:5657/");
+            //return new WebSocketClientChannel("ws://localhost:5658/");
+        }
+
+        private static void client1_Authenticated(object sender, EventArgs e)
         {
             var client2 = new TestClient();
             client2.Connected += (senderInt, eInt) => (senderInt as TestClient).Authenticate("client2@test");
             client2.Authenticated += client2_Authenticated;
-            client2.Connect(new TcpClientChannel("localhost", 5656));
+            client2.Connect(CreateChannel());
         }
 
         private static void client2_Authenticated(object sender, EventArgs e)
@@ -68,7 +77,10 @@ namespace LinkupSharpDemo
         private bool HandleMessage(Packet packet, ClientConnection client, ConnectionManager manager)
         {
             if ((packet.Recipient != null) && (manager.Clients.ContainsKey(packet.Recipient)))
+            {
                 manager.Clients[packet.Recipient].Send(packet);
+                client.Send(packet);
+            }
             return true;
         }
 
