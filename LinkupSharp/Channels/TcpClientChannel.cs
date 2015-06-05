@@ -156,13 +156,13 @@ namespace LinkupSharp.Channels
         private void OnPacketReceived(Packet packet)
         {
             if (PacketReceived != null)
-                PacketReceived(this, new PacketEventArgs(packet));
+                Task.Run(() => PacketReceived(this, new PacketEventArgs(packet)));
         }
 
         private void OnClosed()
         {
             if (Closed != null)
-                Closed(this, EventArgs.Empty);
+                Task.Run(() => Closed(this, EventArgs.Empty));
         }
 
         #endregion Events
