@@ -34,7 +34,7 @@ namespace LinkupSharp.Modules
     public class AuthorizedAttribute : AuthenticatedAttribute
     {
         public object[] Roles { get; private set; }
-        public AuthorizedAttribute(object[] roles)
+        public AuthorizedAttribute(params object[] roles)
         {
             Roles = roles;
         }
