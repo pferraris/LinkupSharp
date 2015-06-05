@@ -171,7 +171,7 @@ namespace LinkupSharp
 
         public void Connect(IClientChannel channel)
         {
-            if (Channel != null)
+            if (Channel == null)
             {
                 Channel = channel;
                 Channel.PacketReceived += Channel_PacketReceived;
