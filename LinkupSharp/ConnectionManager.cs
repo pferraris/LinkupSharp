@@ -101,14 +101,20 @@ namespace LinkupSharp
             ClearListeners();
             ClearAuthenticators();
             ClearModules();
-            ckeckingAuthenticationTimeOut = false;
-            checkAuthentication.Wait();
-            checkAuthentication.Dispose();
+            if (checkAuthentication != null)
+            {
+                ckeckingAuthenticationTimeOut = false;
+                checkAuthentication.Wait();
+                checkAuthentication.Dispose();
+            }
             foreach (var item in anonymous.Keys.ToArray())
                 item.Disconnect();
-            ckeckingInactivityTimeOut = false;
-            checkInactivity.Wait();
-            checkInactivity.Dispose();
+            if (checkInactivity != null)
+            {
+                ckeckingInactivityTimeOut = false;
+                checkInactivity.Wait();
+                checkInactivity.Dispose();
+            }
             foreach (var client in clients.Values.ToArray())
                 client.Disconnect();
         }
