@@ -171,9 +171,12 @@ namespace LinkupSharp
 
         public void Connect(IClientChannel channel)
         {
-            Channel = channel;
-            Channel.PacketReceived += Channel_PacketReceived;
-            Channel.Closed += Channel_Closed;
+            if (Channel != null)
+            {
+                Channel = channel;
+                Channel.PacketReceived += Channel_PacketReceived;
+                Channel.Closed += Channel_Closed;
+            }
         }
 
         public void Disconnect()
