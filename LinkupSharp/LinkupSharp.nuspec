@@ -7,6 +7,7 @@
     <authors>Pablo Ferraris</authors>
     <licenseUrl>https://raw.githubusercontent.com/pferraris/LinkupSharp/master/LICENSE</licenseUrl>
 	<projectUrl>https://github.com/pferraris/LinkupSharp</projectUrl>
+    <iconUrl>https://raw.githubusercontent.com/pferraris/LinkupSharp/master/LinkupSharp.png</iconUrl>
     <requireLicenseAcceptance>false</requireLicenseAcceptance>
     <description>$description$</description>
     <releaseNotes></releaseNotes>
