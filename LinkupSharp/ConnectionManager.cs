@@ -344,17 +344,17 @@ namespace LinkupSharp
             if (session.Token == e.SessionContext.Token)
             {
                 ClientConnection oldClient = null;
-                if ((clients.ContainsKey(client.Id)) && (clients[client.Id] != client))
+                if ((clients.ContainsKey(session.Id)) && (clients[session.Id] != client))
                 {
-                    oldClient = clients[client.Id];
+                    oldClient = clients[session.Id];
                     if (inactives.ContainsKey(oldClient))
                     {
                         lock (inactives)
                             inactives.Remove(oldClient);
                         lock (clients)
                         {
-                            clients.Remove(client.Id);
-                            clients.Add(client.Id, client);
+                            clients.Remove(session.Id);
+                            clients.Add(session.Id, client);
                         }
                         client.Authenticate(session);
                         OnClientReconnected(client, client.Id);
@@ -392,20 +392,13 @@ namespace LinkupSharp
                         if (anonymous.ContainsKey(client))
                             anonymous.Remove(client);
                     break;
-                case Reasons.ConnectionLost:
+                default:
                     if ((clients.ContainsKey(client.Id)) && (!inactives.ContainsKey(client)))
                     {
                         lock (inactives)
                             inactives.Add(client, DateTime.Now);
                         OnClientInactive(client, client.Id);
                     }
-                    break;
-                default:
-                    lock (clients)
-                        if (clients.ContainsKey(client.Id))
-                            clients.Remove(client.Id);
-                    sessions.Remove(client.SessionContext);
-                    OnClientDisconnected(client, client.Id);
                     break;
             }
         }
