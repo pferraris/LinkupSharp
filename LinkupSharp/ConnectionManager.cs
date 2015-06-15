@@ -44,18 +44,18 @@ namespace LinkupSharp
     public class ConnectionManager : IDisposable
     {
         public TimeSpan AuthenticationTimeOut { get; set; }
-        private Dictionary<ClientConnection, DateTime> anonymous;
         private bool ckeckingAuthenticationTimeOut;
         private Task checkAuthentication;
 
         public TimeSpan InactivityTimeOut { get; set; }
-        private Dictionary<ClientConnection, DateTime> inactives;
         private bool ckeckingInactivityTimeOut;
         private Task checkInactivity;
 
+        private Dictionary<ClientConnection, DateTime> anonymous;
+        private Dictionary<ClientConnection, DateTime> inactives;
+        private Dictionary<string, ClientConnection> clients;
         private ISessionRepository sessions;
 
-        private Dictionary<string, ClientConnection> clients;
         public ReadOnlyDictionary<string, ClientConnection> Clients
         {
             get { return new ReadOnlyDictionary<string, ClientConnection>(clients); }
@@ -347,19 +347,19 @@ namespace LinkupSharp
                 if ((clients.ContainsKey(session.Id)) && (clients[session.Id] != client))
                 {
                     oldClient = clients[session.Id];
-                    if (inactives.ContainsKey(oldClient))
-                    {
-                        lock (inactives)
+                    lock (inactives)
+                        if (inactives.ContainsKey(oldClient))
                             inactives.Remove(oldClient);
-                        lock (clients)
-                        {
-                            clients.Remove(session.Id);
-                            clients.Add(session.Id, client);
-                        }
-                        client.Authenticate(session);
-                        OnClientReconnected(client, client.Id);
-                        return;
+                        else
+                            oldClient.Disconnect(Reasons.AnotherSessionOpened);
+                    lock (clients)
+                    {
+                        clients.Remove(session.Id);
+                        clients.Add(session.Id, client);
                     }
+                    client.Authenticate(session);
+                    OnClientReconnected(client, client.Id);
+                    return;
                 }
             }
             client.Send(new AuthenticationFailed(e.SessionContext.Id));

@@ -17,7 +17,7 @@ namespace LinkupSharpDemo
             server.AddListener(new WebSocketChannelListener("http://+:5658/"));
 
             var client1 = new TestClient();
-            client1.Connected += (sender, e) => (sender as TestClient).Authenticate("client1@test");
+            client1.Connected += (sender, e) => client1.Authenticate("client1@test");
             client1.Authenticated += client1_Authenticated;
             client1.Connect(CreateChannel());
             Console.ReadLine();
@@ -25,22 +25,39 @@ namespace LinkupSharpDemo
 
         private static IClientChannel CreateChannel()
         {
-            return new TcpClientChannel("localhost", 5656);
+            //return new TcpClientChannel("localhost", 5656);
             //return new WebClientChannel("http://localhost:5657/");
-            //return new WebSocketClientChannel("ws://localhost:5658/");
+            return new WebSocketClientChannel("ws://localhost:5658/");
         }
 
         private static void client1_Authenticated(object sender, EventArgs e)
         {
             var client2 = new TestClient();
-            client2.Connected += (senderInt, eInt) => (senderInt as TestClient).Authenticate("client2@test");
-            client2.Authenticated += client2_Authenticated;
-            client2.Connect(CreateChannel());
-        }
 
-        private static void client2_Authenticated(object sender, EventArgs e)
-        {
-            (sender as TestClient).SendMessage("Hi client1!!", "client1@test");
+            client2.Connected += (senderInt, eInt) =>
+            {
+                if (client2.SessionContext == null)
+                    client2.Authenticate("client2@test");
+                else
+                    client2.Send((senderInt as TestClient).SessionContext);
+            };
+
+            client2.Authenticated += (senderInt, eInt) =>
+            {
+                client2.SendMessage("Hi client1!!", "client1@test");
+            };
+
+            bool reconnected = false;
+            client2.Disconnected += (senderInt, eInt) =>
+            {
+                if (!reconnected)
+                {
+                    reconnected = true;
+                    client2.Connect(CreateChannel());
+                }
+            };
+
+            client2.Connect(CreateChannel());
         }
     }
 
@@ -81,6 +98,7 @@ namespace LinkupSharpDemo
                 manager.Clients[packet.Recipient].Send(packet);
                 client.Send(packet);
             }
+            client.Disconnect();
             return true;
         }
 
@@ -109,13 +127,13 @@ namespace LinkupSharpDemo
 
         private bool HandleContacts(Packet packet, ClientConnection client)
         {
-            Console.WriteLine("{0} => {1}", client.Id, String.Join<Id>("; ", packet.GetContent<Id[]>()));
+            Console.WriteLine("{0} => Contacts: {1}", client.Id, String.Join<Id>("; ", packet.GetContent<Id[]>()));
             return true;
         }
 
         private bool HandleMessage(Packet packet, ClientConnection client)
         {
-            Console.WriteLine("{0} => {1}: {2}", client.Id, packet.Sender, packet.GetContent<Message>().Text);
+            Console.WriteLine("{0} => {1} say: {2}", client.Id, packet.Sender, packet.GetContent<Message>().Text);
             return true;
         }
     }

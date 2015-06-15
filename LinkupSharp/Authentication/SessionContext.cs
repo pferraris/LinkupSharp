@@ -28,6 +28,7 @@
 #endregion License
 
 using System;
+
 namespace LinkupSharp.Authentication
 {
     public class SessionContext
