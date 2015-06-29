@@ -64,8 +64,6 @@ namespace LinkupSharp.Channels
         {
             ServerSide = serverSide;
             Serializer = new JsonPacketSerializer();
-            if (ServerSide)
-                Logger.Info("Connection received from: {0}", socket.Client.RemoteEndPoint);
             Socket = socket;
             Stream = GetStream();
             active = true;
