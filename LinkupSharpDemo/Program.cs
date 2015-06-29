@@ -98,7 +98,6 @@ namespace LinkupSharpDemo
                 manager.Clients[packet.Recipient].Send(packet);
                 client.Send(packet);
             }
-            client.Disconnect();
             return true;
         }
 
@@ -134,6 +133,7 @@ namespace LinkupSharpDemo
         private bool HandleMessage(Packet packet, ClientConnection client)
         {
             Console.WriteLine("{0} => {1} say: {2}", client.Id, packet.Sender, packet.GetContent<Message>().Text);
+            client.Disconnect();
             return true;
         }
     }
