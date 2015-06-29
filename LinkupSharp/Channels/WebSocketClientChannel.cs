@@ -40,7 +40,7 @@ namespace LinkupSharp.Channels
     public class WebSocketClientChannel : IClientChannel
     {
         private static readonly byte[] Token = new byte[] { 0x0007, 0x000C, 0x000B };
-     
+
         private WebSocket socket;
         private IPacketSerializer serializer;
         private Task readingTask;
@@ -50,8 +50,7 @@ namespace LinkupSharp.Channels
         public WebSocketClientChannel(string url)
         {
             ClientWebSocket socket = new ClientWebSocket();
-            Task connecting = socket.ConnectAsync(new Uri(url), CancellationToken.None);
-            connecting.Wait();
+            socket.ConnectAsync(new Uri(url), CancellationToken.None).Wait();
             SetSocket(socket);
         }
 
@@ -77,14 +76,13 @@ namespace LinkupSharp.Channels
                 try
                 {
                     byte[] buffer = new byte[65536];
-                    var receiving = socket.ReceiveAsync(new ArraySegment<byte>(buffer), cancel.Token);
-                    receiving.Wait();
-                    if (receiving.Result.MessageType == WebSocketMessageType.Close)
+                    var result = socket.ReceiveAsync(new ArraySegment<byte>(buffer), cancel.Token).Result;
+                    if (result.MessageType == WebSocketMessageType.Close)
                     {
                         Close();
                         continue;
                     }
-                    foreach (var packet in serializer.Deserialize(buffer.Take(receiving.Result.Count).ToArray(), Token))
+                    foreach (var packet in serializer.Deserialize(buffer.Take(result.Count).ToArray(), Token))
                         OnPacketReceived(packet);
                 }
                 catch (Exception ex)
@@ -124,7 +122,8 @@ namespace LinkupSharp.Channels
                 }
                 if (socket != null)
                 {
-                    socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None).Wait();
+                    if (socket.State == WebSocketState.Open)
+                        socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None).Wait();
                     socket.Dispose();
                 }
                 readingTask = null;
