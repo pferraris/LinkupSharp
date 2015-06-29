@@ -51,9 +51,9 @@ namespace LinkupSharp
         private bool ckeckingInactivityTimeOut;
         private Task checkInactivity;
 
-        private Dictionary<ClientConnection, DateTime> anonymous;
-        private Dictionary<ClientConnection, DateTime> inactives;
-        private Dictionary<string, ClientConnection> clients;
+        private AnonymousConnections anonymous;
+        private InactiveConnections inactives;
+        private ClientConnections clients;
         private ISessionRepository sessions;
 
         public ReadOnlyDictionary<string, ClientConnection> Clients
@@ -67,9 +67,9 @@ namespace LinkupSharp
             authenticators = new List<IAuthenticator>();
             modules = new List<IServerModule>();
 
-            clients = new Dictionary<string, ClientConnection>();
-            anonymous = new Dictionary<ClientConnection, DateTime>();
-            inactives = new Dictionary<ClientConnection, DateTime>();
+            anonymous = new AnonymousConnections();
+            inactives = new InactiveConnections();
+            clients = new ClientConnections();
 
             sessions = new MemorySessionRepository();
 
@@ -444,6 +444,55 @@ namespace LinkupSharp
         }
 
         #endregion Events
+
+        #region Dictionary Classes
+
+        private class AnonymousConnections : Dictionary<ClientConnection, DateTime>
+        {
+            public new void Add(ClientConnection key, DateTime value)
+            {
+                base.Add(key, value);
+                Logger.Info("{0}: {1} ++", this.GetType().Name, this.Count);
+            }
+
+            public new void Remove(ClientConnection key)
+            {
+                base.Remove(key);
+                Logger.Info("{0}: {1} --", this.GetType().Name, this.Count);
+            }
+        }
+
+        private class InactiveConnections : Dictionary<ClientConnection, DateTime>
+        {
+            public new void Add(ClientConnection key, DateTime value)
+            {
+                base.Add(key, value);
+                Logger.Info("{0}: {1} ++", this.GetType().Name, this.Count);
+            }
+
+            public new void Remove(ClientConnection key)
+            {
+                base.Remove(key);
+                Logger.Info("{0}: {1} --", this.GetType().Name, this.Count);
+            }
+        }
+
+        private class ClientConnections : Dictionary<string, ClientConnection>
+        {
+            public new void Add(string key, ClientConnection value)
+            {
+                base.Add(key, value);
+                Logger.Info("{0}: {1} ++", this.GetType().Name, this.Count);
+            }
+
+            public new void Remove(string key)
+            {
+                base.Remove(key);
+                Logger.Info("{0}: {1} --", this.GetType().Name, this.Count);
+            }
+        }
+
+        #endregion Dictionary Classes
 
     }
 }
