@@ -35,19 +35,19 @@ namespace LinkupSharp.Loggers
     {
         public static void Debug(string message, params object[] parameters)
         {
-            System.Diagnostics.Debug.Print(String.Format(message, parameters));
+            Console.WriteLine(String.Format(message, parameters));
         }
 
         public static void Info(string message, params object[] parameters)
         {
-            System.Diagnostics.Debug.Print(String.Format(message, parameters));
+            Console.WriteLine(String.Format(message, parameters));
         }
 
         public static void Error(Exception ex, string message, params object[] parameters)
         {
-            System.Diagnostics.Debug.Print(String.Format(message, parameters));
-            System.Diagnostics.Debug.Print(ex.Message);
-            System.Diagnostics.Debug.Print(ex.StackTrace);
+            Console.WriteLine(String.Format(message, parameters));
+            Console.WriteLine(ex.Message);
+            Console.WriteLine(ex.StackTrace);
         }
     }
 }
