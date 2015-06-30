@@ -383,23 +383,19 @@ namespace LinkupSharp
             client.AuthenticationRequired -= client_AuthenticationRequired;
             client.PacketReceived -= client_PacketReceived;
             client.Disconnected -= client_Disconnected;
-            switch (e.Disconnected.Reason)
+            if (e.Disconnected.Reason != Reasons.AnotherSessionOpened)
             {
-                case Reasons.AnotherSessionOpened:
-                    break;
-                case Reasons.AuthenticationTimeOut:
+                if (anonymous.ContainsKey(client))
+                {
                     lock (anonymous)
-                        if (anonymous.ContainsKey(client))
-                            anonymous.Remove(client);
-                    break;
-                default:
-                    if ((clients.ContainsKey(client.Id)) && (!inactives.ContainsKey(client)))
-                    {
-                        lock (inactives)
-                            inactives.Add(client, DateTime.Now);
-                        OnClientInactive(client, client.Id);
-                    }
-                    break;
+                        anonymous.Remove(client);
+                }
+                else if ((client.Id != null) && (clients.ContainsKey(client.Id)) && (!inactives.ContainsKey(client)))
+                {
+                    lock (inactives)
+                        inactives.Add(client, DateTime.Now);
+                    OnClientInactive(client, client.Id);
+                }
             }
         }
 
