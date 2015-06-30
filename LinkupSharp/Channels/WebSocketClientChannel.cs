@@ -79,7 +79,7 @@ namespace LinkupSharp.Channels
                     var result = socket.ReceiveAsync(new ArraySegment<byte>(buffer), cancel.Token).Result;
                     if (result.MessageType == WebSocketMessageType.Close)
                     {
-                        Close();
+                        cancel.Cancel();
                         continue;
                     }
                     foreach (var packet in serializer.Deserialize(buffer.Take(result.Count).ToArray(), Token))
@@ -90,11 +90,14 @@ namespace LinkupSharp.Channels
                     Logger.Error(ex, "Reading error.");
                 }
             }
+            OnClosed();
+            Task.Factory.StartNew(() => Dispose());
         }
 
         public void Send(Packet packet)
         {
             if ((cancel != null) && (!cancel.IsCancellationRequested))
+            {
                 try
                 {
                     lock (socket)
@@ -108,34 +111,27 @@ namespace LinkupSharp.Channels
                     Logger.Error(ex, "Sending error.");
                     Close();
                 }
+            }
         }
 
         public void Close()
         {
             if ((cancel != null) && (!cancel.IsCancellationRequested))
-            {
                 cancel.Cancel();
-                if (readingTask != null)
-                {
-                    readingTask.Wait();
-                    readingTask.Dispose();
-                }
-                if (socket != null)
-                {
-                    if (socket.State == WebSocketState.Open)
-                        socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "", CancellationToken.None).Wait();
-                    socket.Dispose();
-                }
-                readingTask = null;
-                socket = null;
-                cancel = null;
-                OnClosed();
-            }
         }
 
         public void Dispose()
         {
-            Close();
+            if (readingTask != null)
+            {
+                readingTask.Wait();
+                readingTask.Dispose();
+            }
+            if (socket != null)
+                socket.Dispose();
+            readingTask = null;
+            socket = null;
+            cancel = null;
         }
 
         #endregion Methods
