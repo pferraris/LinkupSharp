@@ -47,7 +47,6 @@ namespace LinkupSharp.Channels
 
         public WebChannelListener(string prefix)
         {
-            HttpWebRequest.DefaultWebProxy.Credentials = CredentialCache.DefaultNetworkCredentials;
             Prefix = prefix;
         }
 
@@ -96,13 +95,14 @@ namespace LinkupSharp.Channels
             {
                 if (!context.Request.Headers.AllKeys.Contains("ClientId")) return;
                 string id = context.Request.Headers["ClientId"];
+                lock (connections)
                 if (!connections.ContainsKey(id))
-                {
-                    var client = new WebClientChannel(id, true);
-                    client.Closed += client_Closed;
-                    connections.Add(id, client);
-                    OnClientConnected(client);
-                }
+                    {
+                        var client = new WebClientChannel(id, true);
+                        client.Closed += client_Closed;
+                        connections.Add(id, client);
+                        OnClientConnected(client);
+                    }
                 if (context.Request.HttpMethod == "POST")
                 {
                     byte[] buffer = new byte[65536];
@@ -142,8 +142,8 @@ namespace LinkupSharp.Channels
         void client_Closed(object sender, EventArgs e)
         {
             var client = sender as WebClientChannel;
-            if (connections.ContainsKey(client.Address))
-                connections.Remove(client.Address);
+            if (connections.ContainsKey(client.Id))
+                connections.Remove(client.Id);
         }
 
         #endregion Methods

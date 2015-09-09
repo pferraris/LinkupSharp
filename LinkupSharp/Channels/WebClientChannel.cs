@@ -63,18 +63,18 @@ namespace LinkupSharp.Channels
             this.serverSide = true;
             serializer = new JsonPacketSerializer();
             inactivityTime = 5000;
-            inactivityTimer = new Timer(InactivityCheck, null, inactivityTime, Timeout.Infinite);
+            inactivityTimer = new Timer(state => Close(), null, inactivityTime, Timeout.Infinite);
             pending = new Queue<Packet>();
         }
 
         public WebClientChannel(string address)
         {
-            HttpWebRequest.DefaultWebProxy.Credentials = CredentialCache.DefaultNetworkCredentials;
+            WebRequest.DefaultWebProxy.Credentials = CredentialCache.DefaultNetworkCredentials;
             Address = address;
             Id = Guid.NewGuid().ToString();
             serverSide = false;
             serializer = new JsonPacketSerializer();
-            poolingTime = 500;
+            poolingTime = 1000;
             inactivityTime = 5000;
             active = true;
             readingTask = Task.Factory.StartNew(Read);
@@ -104,7 +104,6 @@ namespace LinkupSharp.Channels
                 try
                 {
                     var webRequest = HttpWebRequest.Create(Address) as HttpWebRequest;
-                    HttpWebRequest.DefaultWebProxy.Credentials = CredentialCache.DefaultNetworkCredentials;
                     webRequest.ContentType = "text/plain";
                     webRequest.Headers.Add("ClientId", Id);
                     webRequest.Timeout = inactivityTime;
@@ -167,7 +166,17 @@ namespace LinkupSharp.Channels
 
         public void Close()
         {
-            if (active)
+            if (serverSide)
+            {
+                try
+                {
+                    inactivityTimer.Change(Timeout.Infinite, Timeout.Infinite);
+                    inactivityTimer.Dispose();
+                }
+                catch { throw; }
+                OnClosed();
+            }
+            else if (active)
             {
                 active = false;
                 try
@@ -175,20 +184,9 @@ namespace LinkupSharp.Channels
                     readingTask.Wait();
                     readingTask.Dispose();
                 }
-                catch { }
-                try
-                {
-                    inactivityTimer.Change(Timeout.Infinite, Timeout.Infinite);
-                    inactivityTimer.Dispose();
-                }
-                catch { }
+                catch { throw; }
                 OnClosed();
             }
-        }
-
-        private void InactivityCheck(object state)
-        {
-            Close();
         }
 
         public void Dispose()
