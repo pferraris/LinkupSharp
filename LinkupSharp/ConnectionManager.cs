@@ -394,9 +394,12 @@ namespace LinkupSharp
                     {
                         clients.Remove(session.Id);
                         clients.Add(session.Id, client);
+                        client.Authenticate(session);
+                        OnClientReconnected(client, client.Id);
                     }
-                    client.Authenticate(session);
-                    OnClientReconnected(client, client.Id);
+                    if (anonymous.ContainsKey(client))
+                        lock (anonymous)
+                            anonymous.Remove(client);
                     return;
                 }
             }
