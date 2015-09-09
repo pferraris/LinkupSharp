@@ -66,7 +66,7 @@ namespace LinkupSharp.Channels
             this.socket = socket;
             serializer = new JsonPacketSerializer();
             cancel = new CancellationTokenSource();
-            readingTask = Task.Factory.StartNew(Read, cancel.Token);
+            readingTask = Task.Factory.StartNew(Read, CancellationToken.None);
         }
 
         private void Read()
@@ -85,10 +85,7 @@ namespace LinkupSharp.Channels
                     foreach (var packet in serializer.Deserialize(buffer.Take(result.Count).ToArray(), Token))
                         OnPacketReceived(packet);
                 }
-                catch (Exception ex)
-                {
-                    Logger.Error(ex, "Reading error.");
-                }
+                catch { }
             }
             OnClosed();
             Task.Factory.StartNew(() => Dispose());
