@@ -12,9 +12,9 @@ namespace LinkupSharpDemo
         static void Main(string[] args)
         {
             var server = new TestServer();
-            server.AddListener(new TcpChannelListener(5656));
-            server.AddListener(new WebChannelListener("http://+:5657/"));
-            server.AddListener(new WebSocketChannelListener("http://+:5658/"));
+            server.AddListener("tcp://0.0.0.0:5656/");
+            server.AddListener("http://0.0.0.0:5657/");
+            server.AddListener("ws://0.0.0.0:5658/");
 
             var client1 = new TestClient();
             client1.Connected += (sender, e) => client1.Authenticate("client1@test");

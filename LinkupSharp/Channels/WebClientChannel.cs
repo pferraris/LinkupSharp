@@ -92,7 +92,9 @@ namespace LinkupSharp.Channels
         {
             inactivityTimer.Change(inactivityTime, Timeout.Infinite);
             lock (pending)
-                return serializer.Serialize(pending.Dequeue());
+                if (pending.Any())
+                    return serializer.Serialize(pending.Dequeue());
+            return new byte[0];
         }
 
         private void Read()

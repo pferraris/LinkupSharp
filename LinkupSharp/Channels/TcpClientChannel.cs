@@ -32,7 +32,9 @@ using LinkupSharp.Serializers;
 using System;
 using System.IO;
 using System.Linq;
+using System.Net.Security;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -41,22 +43,29 @@ namespace LinkupSharp.Channels
     public class TcpClientChannel : IClientChannel
     {
         private static readonly byte[] Token = new byte[] { 0x0007, 0x000C, 0x000B };
-
         private Task readingTask;
         private bool active;
-
-        protected TcpClient Socket { get; private set; }
-        protected IPacketSerializer Serializer { get; set; }
-        protected Stream Stream { get; private set; }
-        protected bool ServerSide { get; private set; }
+        private TcpClient Socket { get; set; }
+        private IPacketSerializer Serializer { get; set; }
+        private Stream Stream { get; set; }
+        private bool ServerSide { get; set; }
+        private X509Certificate2 certificate;
 
         public TcpClientChannel(string host, int port)
-            : this()
+            : this(host, port, null)
+        {
+        }
+
+        public TcpClientChannel(string host, int port, X509Certificate2 certificate)
+            : this(certificate)
         {
             SetSocket(new TcpClient(host, port));
         }
 
-        internal TcpClientChannel() { }
+        internal TcpClientChannel(X509Certificate2 certificate)
+        {
+            this.certificate = certificate;
+        }
 
         #region Methods
 
@@ -70,9 +79,36 @@ namespace LinkupSharp.Channels
             readingTask = Task.Factory.StartNew(Read);
         }
 
-        protected virtual Stream GetStream()
+        private Stream GetStream()
         {
-            return Socket.GetStream();
+            Stream stream = null;
+            if (certificate == null)
+            {
+                stream = Socket.GetStream();
+            }
+            else
+            {
+                if (ServerSide)
+                {
+                    stream = new SslStream(Socket.GetStream(), false);
+                    (stream as SslStream).AuthenticateAsServer(certificate);
+                }
+                else
+                {
+                    stream = new SslStream(Socket.GetStream(), false, CertificateValidation);
+                    string hostname = Socket.Client.RemoteEndPoint.ToString();
+                    if (hostname.Contains(":"))
+                        hostname = hostname.Substring(0, hostname.IndexOf(':'));
+                    (stream as SslStream).AuthenticateAsClient(hostname);
+                }
+            }
+            return stream;
+        }
+
+        private bool CertificateValidation(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        {
+            if (this.certificate == null) return false;
+            return certificate.GetSerialNumberString().Equals(this.certificate.GetSerialNumberString());
         }
 
         private void Read()

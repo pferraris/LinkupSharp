@@ -53,8 +53,6 @@
     <Compile Include="Authentication\MemorySessionRepository.cs" />
     <Compile Include="Channels\IChannelListener.cs" />
     <Compile Include="Channels\IClientChannel.cs" />
-    <Compile Include="Channels\SslChannelListener.cs" />
-    <Compile Include="Channels\SslClientChannel.cs" />
     <Compile Include="Channels\WebChannelListener.cs" />
     <Compile Include="Channels\WebClientChannel.cs" />
     <Compile Include="Channels\WebSocketChannelListener.cs" />

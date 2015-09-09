@@ -36,6 +36,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Configuration;
 using System.Linq;
+using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -135,6 +137,42 @@ namespace LinkupSharp
                 listeners.Add(listener);
                 listener.ClientConnected += listener_ClientConnected;
                 listener.Start();
+            }
+        }
+
+        public void AddListener(string endpoint, X509Certificate2 certificate = null)
+        {
+            var uri = new Uri(endpoint);
+            IPAddress address;
+            switch (uri.Scheme.ToLower())
+            {
+                case "tcp":
+                case "ssl":
+                    if (uri.Scheme.ToLower() == "tcp") certificate = null;
+                    if (IPAddress.TryParse(uri.Host, out address))
+                        AddListener(new TcpChannelListener(uri.Port, address, certificate));
+                    else
+                    {
+                        IPAddress[] addressList = Dns.GetHostAddresses(uri.Host);
+                        if (addressList != null)
+                            foreach (var item in addressList)
+                                AddListener(new TcpChannelListener(uri.Port, item, certificate));
+                        else
+                            AddListener(new TcpChannelListener(uri.Port, certificate));
+                    }
+                    break;
+                case "http":
+                case "https":
+                    endpoint = endpoint.Replace("0.0.0.0", "+");
+                    AddListener(new WebChannelListener(endpoint));
+                    break;
+                case "ws":
+                case "wss":
+                    endpoint = endpoint.Replace("0.0.0.0", "+");
+                    endpoint = endpoint.Replace("wss://", "https://");
+                    endpoint = endpoint.Replace("ws://", "http://");
+                    AddListener(new WebSocketChannelListener(endpoint));
+                    break;
             }
         }
 

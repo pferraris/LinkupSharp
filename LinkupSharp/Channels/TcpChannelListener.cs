@@ -31,6 +31,7 @@ using LinkupSharp.Loggers;
 using System;
 using System.Net;
 using System.Net.Sockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -44,15 +45,34 @@ namespace LinkupSharp.Channels
         private TcpListener listener;
         private bool listening;
         private Task listenerTask;
+        private X509Certificate2 certificate;
 
-        public TcpChannelListener(int port, IPAddress address = null)
+        public TcpChannelListener(int port)
+            : this(port, null, null)
+        {
+        }
+
+        public TcpChannelListener(int port, IPAddress address)
+            : this(port, address, null)
+        {
+        }
+
+        public TcpChannelListener(int port, X509Certificate2 certificate)
+            : this(port, null, certificate)
+        {
+        }
+
+        public TcpChannelListener(int port, IPAddress address, X509Certificate2 certificate)
         {
             Port = port;
             if (address == null)
                 Address = IPAddress.Any;
             else
                 Address = address;
+            this.certificate = certificate;
         }
+
+        #region Methods
 
         public void Start()
         {
@@ -89,11 +109,11 @@ namespace LinkupSharp.Channels
             }
         }
 
-        protected virtual IClientChannel CreateClient(TcpClient socket)
+        private IClientChannel CreateClient(TcpClient socket)
         {
             try
             {
-                TcpClientChannel client = new TcpClientChannel();
+                TcpClientChannel client = new TcpClientChannel(certificate);
                 client.SetSocket(socket, true);
                 return client;
             }
@@ -107,6 +127,8 @@ namespace LinkupSharp.Channels
                 return null;
             }
         }
+
+        #endregion Methods
 
         #region Events
 
