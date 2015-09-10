@@ -33,6 +33,7 @@ using LinkupSharp.Modules;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Security.Cryptography.X509Certificates;
 
 namespace LinkupSharp
 {
@@ -166,6 +167,26 @@ namespace LinkupSharp
                 if ((!serverSide) && (SessionContext != null))
                     packet.Sender = SessionContext.Id;
                 Channel.Send(packet);
+            }
+        }
+
+        public void Connect(string endpoint, X509Certificate2 certificate = null)
+        {
+            var uri = new Uri(endpoint);
+            switch (uri.Scheme.ToLower())
+            {
+                case "tcp":
+                case "ssl":
+                    Connect(new TcpClientChannel(uri.Host, uri.Port, certificate));
+                    break;
+                case "http":
+                case "https":
+                    Connect(new WebClientChannel(uri.AbsoluteUri));
+                    break;
+                case "ws":
+                case "wss":
+                    Connect(new WebSocketClientChannel(uri.AbsoluteUri));
+                    break;
             }
         }
 

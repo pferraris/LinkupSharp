@@ -19,15 +19,15 @@ namespace LinkupSharpDemo
             var client1 = new TestClient();
             client1.Connected += (sender, e) => client1.Authenticate("client1@test");
             client1.Authenticated += client1_Authenticated;
-            client1.Connect(CreateChannel());
+            client1.Connect(GetEndpoint());
             Console.ReadLine();
         }
 
-        private static IClientChannel CreateChannel()
+        private static string GetEndpoint()
         {
-            //return new TcpClientChannel("localhost", 5656);
-            //return new WebClientChannel("http://localhost:5657/");
-            return new WebSocketClientChannel("ws://localhost:5658/");
+            //return "tcp://localhost:5656/";
+            //return "http://localhost:5657/";
+            return "ws://localhost:5658/";
         }
 
         private static void client1_Authenticated(object sender, EventArgs e)
@@ -53,11 +53,11 @@ namespace LinkupSharpDemo
                 if (!reconnected)
                 {
                     reconnected = true;
-                    client2.Connect(CreateChannel());
+                    client2.Connect(GetEndpoint());
                 }
             };
 
-            client2.Connect(CreateChannel());
+            client2.Connect(GetEndpoint());
         }
     }
 
