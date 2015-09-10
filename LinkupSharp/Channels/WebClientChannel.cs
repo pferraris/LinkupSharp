@@ -48,8 +48,8 @@ namespace LinkupSharp.Channels
         private int poolingTime;
         private Timer inactivityTimer;
         private int inactivityTime;
+        private string uri;
 
-        internal string Address { get; private set; }
         internal string Id { get; private set; }
 
         static WebClientChannel()
@@ -67,10 +67,10 @@ namespace LinkupSharp.Channels
             pending = new Queue<Packet>();
         }
 
-        public WebClientChannel(string address)
+        public WebClientChannel(string uri)
         {
             WebRequest.DefaultWebProxy.Credentials = CredentialCache.DefaultNetworkCredentials;
-            Address = address;
+            this.uri = uri;
             Id = Guid.NewGuid().ToString();
             serverSide = false;
             serializer = new JsonPacketSerializer();
@@ -103,7 +103,7 @@ namespace LinkupSharp.Channels
             {
                 try
                 {
-                    var webRequest = HttpWebRequest.Create(Address) as HttpWebRequest;
+                    var webRequest = HttpWebRequest.Create(uri) as HttpWebRequest;
                     webRequest.ContentType = "text/plain";
                     webRequest.Headers.Add("ClientId", Id);
                     webRequest.Timeout = inactivityTime;
@@ -142,7 +142,7 @@ namespace LinkupSharp.Channels
                 try
                 {
                     byte[] buffer = serializer.Serialize(packet);
-                    var webRequest = HttpWebRequest.Create(Address) as HttpWebRequest;
+                    var webRequest = HttpWebRequest.Create(uri) as HttpWebRequest;
                     webRequest.ContentType = "text/plain";
                     webRequest.Headers.Add("ClientId", Id);
                     webRequest.Method = "POST";
