@@ -148,7 +148,6 @@ namespace LinkupSharp
             {
                 case "tcp":
                 case "ssl":
-                    if (uri.Scheme.ToLower() == "tcp") certificate = null;
                     if (IPAddress.TryParse(uri.Host, out address))
                         AddListener(new TcpChannelListener(uri.Port, address, certificate));
                     else
