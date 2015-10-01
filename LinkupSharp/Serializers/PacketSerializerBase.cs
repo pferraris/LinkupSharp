@@ -27,7 +27,7 @@
 */
 #endregion License
 
-using LinkupSharp.Loggers;
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -36,6 +36,7 @@ namespace LinkupSharp.Serializers
 {
     public abstract class PacketSerializerBase : IPacketSerializer
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(PacketSerializerBase));
         private List<byte> buffer;
 
         public PacketSerializerBase()
@@ -67,7 +68,7 @@ namespace LinkupSharp.Serializers
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error(ex, "Deserialization error.");
+                        log.Error("Deserialization error", ex);
                     }
                 }
             }

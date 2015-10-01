@@ -27,8 +27,8 @@
 */
 #endregion License
 
-using LinkupSharp.Loggers;
 using LinkupSharp.Serializers;
+using log4net;
 using System;
 using System.Linq;
 using System.Net.WebSockets;
@@ -39,6 +39,7 @@ namespace LinkupSharp.Channels
 {
     public class WebSocketClientChannel : IClientChannel
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketClientChannel));
         private static readonly byte[] Token = new byte[] { 0x0007, 0x000C, 0x000B };
 
         private WebSocket socket;
@@ -105,7 +106,7 @@ namespace LinkupSharp.Channels
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error(ex, "Sending error.");
+                    log.Error("Sending error", ex);
                     Close();
                 }
             }

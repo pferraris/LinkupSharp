@@ -27,7 +27,7 @@
 */
 #endregion License
 
-using LinkupSharp.Loggers;
+using log4net;
 using System;
 using System.Net;
 using System.Net.Sockets;
@@ -39,6 +39,7 @@ namespace LinkupSharp.Channels
 {
     public class TcpChannelListener : IChannelListener
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(TcpChannelListener));
         public int Port { get; private set; }
         public IPAddress Address { get; private set; }
 
@@ -103,7 +104,7 @@ namespace LinkupSharp.Channels
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error(ex, "Error when client connected.");
+                        log.Error("Error when client connected", ex);
                     }
                 Thread.Sleep(50);
             }
@@ -119,7 +120,7 @@ namespace LinkupSharp.Channels
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "Cannot create client connection.");
+                log.Error("Cannot create client connection", ex);
                 socket.Close();
                 socket.GetStream().Close();
                 socket.Client.Disconnect(false);

@@ -27,8 +27,8 @@
 */
 #endregion License
 
-using LinkupSharp.Loggers;
 using LinkupSharp.Serializers;
+using log4net;
 using System;
 using System.IO;
 using System.Linq;
@@ -42,6 +42,7 @@ namespace LinkupSharp.Channels
 {
     public class TcpClientChannel : IClientChannel
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(TcpClientChannel));
         private static readonly byte[] Token = new byte[] { 0x0007, 0x000C, 0x000B };
         private Task readingTask;
         private bool active;
@@ -126,7 +127,7 @@ namespace LinkupSharp.Channels
                     }
                     catch (Exception ex)
                     {
-                        Logger.Error(ex, "Reading error.");
+                        log.Error("Reading error", ex);
                     }
                 }
                 else
@@ -148,7 +149,7 @@ namespace LinkupSharp.Channels
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error(ex, "Sending error.");
+                    log.Error("Sending error", ex);
                     Close();
                 }
         }

@@ -1,7 +1,7 @@
 ﻿using LinkupSharp;
 using LinkupSharp.Authentication;
-using LinkupSharp.Channels;
 using LinkupSharp.Modules;
+using log4net.Config;
 using System;
 using System.Linq;
 
@@ -11,6 +11,8 @@ namespace LinkupSharpDemo
     {
         static void Main(string[] args)
         {
+            XmlConfigurator.Configure();
+
             var server = new TestServer();
             server.AddListener("tcp://0.0.0.0:5656/");
             server.AddListener("http://0.0.0.0:5657/");

@@ -27,7 +27,7 @@
 */
 #endregion License
 
-using LinkupSharp.Loggers;
+using log4net;
 using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
@@ -36,6 +36,8 @@ namespace LinkupSharp
 {
     public class Packet
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(Packet));
+
         public Id Sender { get; set; }
         public Id Recipient { get; set; }
         public string Content { get; set; }
@@ -72,7 +74,7 @@ namespace LinkupSharp
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "Error getting packet content: {0}", this);
+                log.Error(string.Format("Error getting packet content: {0}", this), ex);
                 return default(object);
             }
         }
@@ -86,7 +88,7 @@ namespace LinkupSharp
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "Error getting packet content: {0}", this);
+                log.Error(string.Format("Error getting packet content: {0}", this), ex);
                 return default(T);
             }
         }

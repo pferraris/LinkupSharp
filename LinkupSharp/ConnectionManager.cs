@@ -29,8 +29,8 @@
 
 using LinkupSharp.Authentication;
 using LinkupSharp.Channels;
-using LinkupSharp.Loggers;
 using LinkupSharp.Modules;
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -45,6 +45,8 @@ namespace LinkupSharp
 {
     public class ConnectionManager : IDisposable
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(ConnectionManager));
+
         public TimeSpan AuthenticationTimeOut { get; set; }
         private bool ckeckingAuthenticationTimeOut;
         private Task checkAuthentication;
@@ -276,7 +278,7 @@ namespace LinkupSharp
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error(ex, "Error checking authentication timeout.");
+                    log.Error("Error checking authentication timeout", ex);
                 }
             }
         }
@@ -302,7 +304,7 @@ namespace LinkupSharp
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error(ex, "Error checking inactivity timeout.");
+                    log.Error("Error checking inactivity timeout", ex);
                 }
             }
         }
@@ -488,13 +490,13 @@ namespace LinkupSharp
             public new void Add(ClientConnection key, DateTime value)
             {
                 base.Add(key, value);
-                Logger.Info("{0}: {1} ++", this.GetType().Name, this.Count);
+                log.InfoFormat("Anonymous: {0} ++", Count);
             }
 
             public new void Remove(ClientConnection key)
             {
                 base.Remove(key);
-                Logger.Info("{0}: {1} --", this.GetType().Name, this.Count);
+                log.InfoFormat("Anonymous: {0} --", Count);
             }
         }
 
@@ -503,13 +505,13 @@ namespace LinkupSharp
             public new void Add(ClientConnection key, DateTime value)
             {
                 base.Add(key, value);
-                Logger.Info("{0}: {1} ++", this.GetType().Name, this.Count);
+                log.InfoFormat("Inactive: {0} ++", Count);
             }
 
             public new void Remove(ClientConnection key)
             {
                 base.Remove(key);
-                Logger.Info("{0}: {1} --", this.GetType().Name, this.Count);
+                log.InfoFormat("Inactive: {0} --", Count);
             }
         }
 
@@ -518,13 +520,13 @@ namespace LinkupSharp
             public new void Add(string key, ClientConnection value)
             {
                 base.Add(key, value);
-                Logger.Info("{0}: {1} ++", this.GetType().Name, this.Count);
+                log.InfoFormat("Authenticated: {0} ++", Count);
             }
 
             public new void Remove(string key)
             {
                 base.Remove(key);
-                Logger.Info("{0}: {1} --", this.GetType().Name, this.Count);
+                log.InfoFormat("Authenticated: {0} --", Count);
             }
         }
 

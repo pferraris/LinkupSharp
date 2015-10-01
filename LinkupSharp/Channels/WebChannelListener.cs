@@ -27,7 +27,7 @@
 */
 #endregion License
 
-using LinkupSharp.Loggers;
+using log4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,6 +38,7 @@ namespace LinkupSharp.Channels
 {
     public class WebChannelListener : IChannelListener
     {
+        private static readonly ILog log = LogManager.GetLogger(typeof(WebChannelListener));
         public string Prefix { get; private set; }
 
         private Dictionary<string, WebClientChannel> connections;
@@ -83,7 +84,7 @@ namespace LinkupSharp.Channels
                 }
                 catch (Exception ex)
                 {
-                    Logger.Error(ex, "Error when client connected.");
+                    log.Error("Error when client connected", ex);
                 }
             }
         }
@@ -133,7 +134,7 @@ namespace LinkupSharp.Channels
             }
             catch (Exception ex)
             {
-                Logger.Error(ex, "Error processing request.");
+                log.Error("Error processing request", ex);
                 context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
             }
             context.Response.Close();
