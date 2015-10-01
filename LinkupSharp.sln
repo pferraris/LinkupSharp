@@ -7,6 +7,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LinkupSharp", "LinkupSharp\
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LinkupSharpDemo", "LinkupSharpDemo\LinkupSharpDemo.csproj", "{F982138A-7312-48ED-9B2E-77BCFDD4739B}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LinkupSharp.Protobuf", "LinkupSharp.Protobuf\LinkupSharp.Protobuf.csproj", "{6D7D901B-79DA-4551-92E2-53936397AD09}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{F982138A-7312-48ED-9B2E-77BCFDD4739B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F982138A-7312-48ED-9B2E-77BCFDD4739B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F982138A-7312-48ED-9B2E-77BCFDD4739B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6D7D901B-79DA-4551-92E2-53936397AD09}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6D7D901B-79DA-4551-92E2-53936397AD09}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6D7D901B-79DA-4551-92E2-53936397AD09}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6D7D901B-79DA-4551-92E2-53936397AD09}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
