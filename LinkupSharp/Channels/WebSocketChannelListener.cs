@@ -27,96 +27,70 @@
 */
 #endregion License
 
+using log4net;
+using SocketHttpListener.Net;
+using SocketHttpListener.Net.WebSockets;
 using System;
-using System.Net;
-using System.Net.WebSockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
-using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
 {
     public class WebSocketChannelListener : IChannelListener
     {
-        public event EventHandler<ClientChannelEventArgs> ClientConnected;
+        private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketChannelListener));
+        private HttpListener listener;
+        private X509Certificate2 certificate;
 
+        public event EventHandler<ClientChannelEventArgs> ClientConnected;
         public string Prefix { get; private set; }
 
-        private HttpListener listener;
-        private CancellationTokenSource cancel;
-        private Task listenerTask;
-
-        public WebSocketChannelListener(string prefix)
+        public WebSocketChannelListener(string prefix, X509Certificate2 certificate = null)
         {
             Prefix = prefix;
+            this.certificate = certificate;
         }
 
         public void Start()
         {
-            if (listener == null)
-            {
-                listener = new HttpListener();
-                listener.Prefixes.Add(Prefix);
-                listener.Start();
-                cancel = new CancellationTokenSource();
-                listenerTask = Task.Factory.StartNew(Listen);
-            }
+            if (listener != null)
+                Stop();
+            listener = new HttpListener(new Patterns.Logging.NullLogger(), certificate);
+            listener.Prefixes.Add(Prefix);
+            listener.OnContext = x => ProcessRequest(x);
+            listener.Start();
         }
 
         public void Stop()
         {
             if (listener != null)
             {
-                cancel.Cancel();
                 listener.Stop();
-                listenerTask.Wait();
-                listenerTask.Dispose();
                 listener = null;
-                listenerTask = null;
-                cancel = null;
             }
         }
 
-        private void Listen()
+        private void ProcessRequest(HttpListenerContext listenerContext)
         {
-            HttpListenerContext context;
-            while (!cancel.IsCancellationRequested)
-            {
-                try
-                {
-                    context = listener.GetContext();
-                }
-                catch
-                {
-                    context = null;
-                }
-                if (context != null)
-                {
-                    if (context.Request.IsWebSocketRequest)
-                    {
-                        ProcessRequest(context);
-                    }
-                    else
-                    {
-                        context.Response.StatusCode = (int)HttpStatusCode.BadRequest;
-                        context.Response.Close();
-                    }
-                }
-            }
-        }
-
-        private async void ProcessRequest(HttpListenerContext listenerContext)
-        {
-            WebSocketContext webSocketContext = null;
             try
             {
-                webSocketContext = await listenerContext.AcceptWebSocketAsync(subProtocol: null);
-                OnClientConnected(new WebSocketClientChannel(webSocketContext.WebSocket));
+                if (listenerContext.Request.IsWebSocketRequest)
+                {
+                    WebSocketContext webSocketContext = null;
+                    webSocketContext = listenerContext.AcceptWebSocket(null);
+                    OnClientConnected(new WebSocketServerChannel(webSocketContext.WebSocket));
+                }
+                else
+                {
+                    listenerContext.Response.StatusCode = (int)HttpStatusCode.BadRequest;
+                    listenerContext.Response.Close();
+                }
             }
-            catch
+            catch (Exception ex)
             {
-                listenerContext.Response.StatusCode = 500;
+                log.Error("Error processing HttpListenerContext for WebSocket", ex);
+                listenerContext.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
                 listenerContext.Response.Close();
-                return;
             }
         }
 

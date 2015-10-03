@@ -185,7 +185,7 @@ namespace LinkupSharp
                     break;
                 case "ws":
                 case "wss":
-                    Connect(new WebSocketClientChannel(uri.AbsoluteUri));
+                    Connect(new WebSocketClientChannel(uri.AbsoluteUri, certificate));
                     break;
             }
         }

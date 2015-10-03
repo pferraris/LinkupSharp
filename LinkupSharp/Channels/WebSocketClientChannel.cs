@@ -31,7 +31,10 @@ using LinkupSharp.Serializers;
 using log4net;
 using System;
 using System.Linq;
+using System.Net;
+using System.Net.Security;
 using System.Net.WebSockets;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -46,21 +49,24 @@ namespace LinkupSharp.Channels
         private IPacketSerializer serializer;
         private Task readingTask;
         private CancellationTokenSource cancel;
+        private X509Certificate2 certificate;
 
-
-        public WebSocketClientChannel(string url)
+        public WebSocketClientChannel(string url, X509Certificate2 certificate = null)
         {
+            this.certificate = certificate;
+            ServicePointManager.ServerCertificateValidationCallback = CertificateValidation;
             ClientWebSocket socket = new ClientWebSocket();
             socket.ConnectAsync(new Uri(url), CancellationToken.None).Wait();
             SetSocket(socket);
         }
 
-        internal WebSocketClientChannel(WebSocket socket)
-        {
-            SetSocket(socket);
-        }
-
         #region Methods
+
+        private bool CertificateValidation(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        {
+            if (this.certificate == null) return false;
+            return certificate.GetSerialNumberString().Equals(this.certificate.GetSerialNumberString());
+        }
 
         private void SetSocket(WebSocket socket)
         {

@@ -4,6 +4,9 @@ using LinkupSharp.Modules;
 using log4net.Config;
 using System;
 using System.Linq;
+using System.Reflection;
+using System.Security.Cryptography.X509Certificates;
+using System.Text;
 
 namespace LinkupSharpDemo
 {
@@ -12,16 +15,18 @@ namespace LinkupSharpDemo
         static void Main(string[] args)
         {
             XmlConfigurator.Configure();
+            certificatePfx = new X509Certificate2(LoadResource("LinkupSharpDemo.Resources.certificate.pfx"), LoadResourceString("LinkupSharpDemo.Resources.certificate.key"));
+            certificateCer = new X509Certificate2(LoadResource("LinkupSharpDemo.Resources.certificate.cer"));
 
             var server = new TestServer();
             server.AddListener("tcp://0.0.0.0:5656/");
             server.AddListener("http://0.0.0.0:5657/");
-            server.AddListener("ws://0.0.0.0:5658/");
+            server.AddListener("wss://localhost:5658/", certificatePfx);
 
             var client1 = new TestClient();
             client1.Connected += (sender, e) => client1.Authenticate("client1@test");
             client1.Authenticated += client1_Authenticated;
-            client1.Connect(GetEndpoint());
+            client1.Connect(GetEndpoint(), certificateCer);
             Console.ReadLine();
         }
 
@@ -29,7 +34,25 @@ namespace LinkupSharpDemo
         {
             //return "tcp://localhost:5656/";
             //return "http://localhost:5657/";
-            return "ws://localhost:5658/";
+            return "wss://localhost:5658/";
+        }
+
+        private static X509Certificate2 certificatePfx;
+        private static X509Certificate2 certificateCer;
+
+        private static byte[] LoadResource(string resourceName)
+        {
+            using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName))
+            {
+                var buffer = new byte[8 * 1024];
+                var len = stream.Read(buffer, 0, buffer.Length);
+                return buffer.Take(len).ToArray();
+            }
+        }
+
+        private static string LoadResourceString(string resourceName)
+        {
+            return Encoding.UTF8.GetString(LoadResource(resourceName));
         }
 
         private static void client1_Authenticated(object sender, EventArgs e)
@@ -55,11 +78,11 @@ namespace LinkupSharpDemo
                 if (!reconnected)
                 {
                     reconnected = true;
-                    client2.Connect(GetEndpoint());
+                    client2.Connect(GetEndpoint(), certificateCer);
                 }
             };
 
-            client2.Connect(GetEndpoint());
+            client2.Connect(GetEndpoint(), certificateCer);
         }
     }
 

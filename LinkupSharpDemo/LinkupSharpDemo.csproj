@@ -50,6 +50,10 @@
     <None Include="App.config" />
     <None Include="app.manifest" />
     <None Include="packages.config" />
+    <EmbeddedResource Include="Resources\certificate.pfx" />
+    <EmbeddedResource Include="Resources\certificate.key" />
+    <EmbeddedResource Include="Resources\certificate.cer" />
+    <None Include="Resources\issuer.cer" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\LinkupSharp\LinkupSharp.csproj">

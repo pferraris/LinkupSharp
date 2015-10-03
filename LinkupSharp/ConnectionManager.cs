@@ -172,7 +172,7 @@ namespace LinkupSharp
                     endpoint = endpoint.Replace("0.0.0.0", "+");
                     endpoint = endpoint.Replace("wss://", "https://");
                     endpoint = endpoint.Replace("ws://", "http://");
-                    AddListener(new WebSocketChannelListener(endpoint));
+                    AddListener(new WebSocketChannelListener(endpoint, certificate));
                     break;
             }
         }
