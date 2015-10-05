@@ -32,7 +32,6 @@ using SocketHttpListener.Net;
 using SocketHttpListener.Net.WebSockets;
 using System;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
 
 namespace LinkupSharp.Channels
 {
@@ -55,7 +54,7 @@ namespace LinkupSharp.Channels
         {
             if (listener != null)
                 Stop();
-            listener = new HttpListener(new Patterns.Logging.NullLogger(), certificate);
+            listener = new HttpListener(certificate);
             listener.Prefixes.Add(Prefix);
             listener.OnContext = x => ProcessRequest(x);
             listener.Start();

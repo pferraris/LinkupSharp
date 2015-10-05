@@ -31,9 +31,7 @@ using LinkupSharp.Serializers;
 using log4net;
 using SocketHttpListener;
 using System;
-using System.Linq;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
@@ -65,6 +63,7 @@ namespace LinkupSharp.Channels
         private void Socket_OnClose(object sender, CloseEventArgs e)
         {
             socket = null;
+            OnClosed();
         }
 
         private void Socket_OnMessage(object sender, MessageEventArgs e)
