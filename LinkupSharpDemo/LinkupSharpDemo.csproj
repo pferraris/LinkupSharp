@@ -35,8 +35,8 @@
     <ApplicationManifest>app.manifest</ApplicationManifest>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="log4net, Version=1.2.13.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
-      <HintPath>..\packages\log4net.2.0.3\lib\net40-full\log4net.dll</HintPath>
+    <Reference Include="log4net, Version=1.2.15.0, Culture=neutral, PublicKeyToken=669e0ddf0bb1aa2a, processorArchitecture=MSIL">
+      <HintPath>..\packages\log4net.2.0.5\lib\net45-full\log4net.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
@@ -49,10 +49,10 @@
   <ItemGroup>
     <None Include="App.config" />
     <None Include="app.manifest" />
-    <None Include="packages.config" />
     <EmbeddedResource Include="Resources\certificate.pfx" />
     <EmbeddedResource Include="Resources\certificate.key" />
     <EmbeddedResource Include="Resources\certificate.cer" />
+    <None Include="packages.config" />
     <None Include="Resources\issuer.cer" />
   </ItemGroup>
   <ItemGroup>
