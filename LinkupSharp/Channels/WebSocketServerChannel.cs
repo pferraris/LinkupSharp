@@ -36,10 +36,9 @@ using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
 {
-    internal class WebSocketServerChannel : IClientChannel
+    internal class WebSocketServerChannel<T> : IClientChannel where T : IPacketSerializer, new()
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketClientChannel));
-        private static readonly byte[] Token = new byte[] { 0x0007, 0x000C, 0x000B };
+        private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketServerChannel<T>));
 
         private WebSocket socket;
         private IPacketSerializer serializer;
@@ -51,18 +50,20 @@ namespace LinkupSharp.Channels
             socket.OnClose += Socket_OnClose;
             socket.OnMessage += Socket_OnMessage;
             socket.OnError += Socket_OnError;
-            serializer = new JsonPacketSerializer();
+            byte[] token = new byte[] { 0x0007, 0x000C, 0x000B };
+            serializer = new TokenizedPacketSerializer<T>(token);
             socket.ConnectAsServer();
         }
 
+        #region Socket Events
+
         private void Socket_OnOpen(object sender, EventArgs e)
         {
-            
+
         }
 
         private void Socket_OnClose(object sender, CloseEventArgs e)
         {
-            socket = null;
             OnClosed();
         }
 
@@ -73,8 +74,14 @@ namespace LinkupSharp.Channels
                 if (e.Type == Opcode.Close)
                     socket.Close();
                 else
-                    foreach (var packet in serializer.Deserialize(e.RawData, Token))
+                {
+                    var packet = serializer.Deserialize(e.RawData);
+                    while (packet != null)
+                    {
                         OnPacketReceived(packet);
+                        packet = serializer.Deserialize(new byte[0]);
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -87,26 +94,28 @@ namespace LinkupSharp.Channels
             log.Error(e.Message);
         }
 
+        #endregion Socket Events
+
         #region Methods
 
-        public void Send(Packet packet)
+        public async Task Send(Packet packet)
         {
             if (socket.ReadyState == WebSocketState.Open)
             {
                 try
                 {
-                    byte[] buffer = serializer.Serialize(packet, Token);
+                    byte[] buffer = serializer.Serialize(packet);
                     socket.SendAsync(Encoding.UTF8.GetString(buffer), x => { });
                 }
                 catch (Exception ex)
                 {
                     log.Error("Sending error", ex);
-                    Close();
+                    await Close();
                 }
             }
         }
 
-        public void Close()
+        public async Task Close()
         {
             if ((socket.ReadyState == WebSocketState.Open) && (socket.ReadyState == WebSocketState.Connecting))
                 socket.Close();
@@ -127,13 +136,13 @@ namespace LinkupSharp.Channels
         private void OnPacketReceived(Packet packet)
         {
             if (PacketReceived != null)
-                Task.Run(() => PacketReceived(this, new PacketEventArgs(packet)));
+                PacketReceived(this, new PacketEventArgs(packet));
         }
 
         private void OnClosed()
         {
             if (Closed != null)
-                Task.Run(() => Closed(this, EventArgs.Empty));
+                Closed(this, EventArgs.Empty);
         }
 
         #endregion Events

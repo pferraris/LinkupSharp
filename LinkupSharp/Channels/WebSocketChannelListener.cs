@@ -27,6 +27,7 @@
 */
 #endregion License
 
+using LinkupSharp.Serializers;
 using log4net;
 using SocketHttpListener.Net;
 using SocketHttpListener.Net.WebSockets;
@@ -35,13 +36,12 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace LinkupSharp.Channels
 {
-    public class WebSocketChannelListener : IChannelListener
+    public class WebSocketChannelListener<T> : IChannelListener where T : IPacketSerializer, new()
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketChannelListener));
+        private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketChannelListener<T>));
         private HttpListener listener;
         private X509Certificate2 certificate;
 
-        public event EventHandler<ClientChannelEventArgs> ClientConnected;
         public string Prefix { get; private set; }
 
         public WebSocketChannelListener(string prefix, X509Certificate2 certificate = null)
@@ -49,6 +49,8 @@ namespace LinkupSharp.Channels
             Prefix = prefix;
             this.certificate = certificate;
         }
+
+        #region Methods
 
         public void Start()
         {
@@ -77,7 +79,7 @@ namespace LinkupSharp.Channels
                 {
                     WebSocketContext webSocketContext = null;
                     webSocketContext = listenerContext.AcceptWebSocket(null);
-                    OnClientConnected(new WebSocketServerChannel(webSocketContext.WebSocket));
+                    OnClientConnected(new WebSocketServerChannel<T>(webSocketContext.WebSocket));
                 }
                 else
                 {
@@ -93,10 +95,20 @@ namespace LinkupSharp.Channels
             }
         }
 
+        #endregion Methods
+
+        #region Events
+
+        public event EventHandler<ClientChannelEventArgs> ClientConnected;
+
         private void OnClientConnected(IClientChannel clientChannel)
         {
+            if (clientChannel == null) return;
             if (ClientConnected != null)
                 ClientConnected(this, new ClientChannelEventArgs(clientChannel));
         }
+
+        #endregion Events
+
     }
 }

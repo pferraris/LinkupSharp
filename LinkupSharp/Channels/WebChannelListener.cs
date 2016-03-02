@@ -27,6 +27,7 @@
 */
 #endregion License
 
+using LinkupSharp.Serializers;
 using log4net;
 using System;
 using System.Collections.Generic;
@@ -36,12 +37,12 @@ using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
 {
-    public class WebChannelListener : IChannelListener
+    public class WebChannelListener<T> : IChannelListener where T : IPacketSerializer, new()
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(WebChannelListener));
+        private static readonly ILog log = LogManager.GetLogger(typeof(WebChannelListener<T>));
         public string Prefix { get; private set; }
 
-        private Dictionary<string, WebClientChannel> connections;
+        private Dictionary<string, WebClientChannel<T>> connections;
         private HttpListener listener;
         private bool listening;
         private Task listenerTask;
@@ -55,7 +56,7 @@ namespace LinkupSharp.Channels
 
         public void Start()
         {
-            connections = new Dictionary<string, WebClientChannel>();
+            connections = new Dictionary<string, WebClientChannel<T>>();
             listener = new HttpListener();
             listener.Prefixes.Add(Prefix);
             listener.Start();
@@ -99,7 +100,7 @@ namespace LinkupSharp.Channels
                 lock (connections)
                 if (!connections.ContainsKey(id))
                     {
-                        var client = new WebClientChannel(id, true);
+                        var client = new WebClientChannel<T>(id, true);
                         client.Closed += client_Closed;
                         connections.Add(id, client);
                         OnClientConnected(client);
@@ -142,7 +143,7 @@ namespace LinkupSharp.Channels
 
         void client_Closed(object sender, EventArgs e)
         {
-            var client = sender as WebClientChannel;
+            var client = sender as WebClientChannel<T>;
             if (connections.ContainsKey(client.Id))
                 connections.Remove(client.Id);
         }

@@ -30,6 +30,7 @@
 using LinkupSharp.Authentication;
 using LinkupSharp.Channels;
 using LinkupSharp.Modules;
+using LinkupSharp.Serializers;
 using log4net;
 using System;
 using System.Collections.Generic;
@@ -144,6 +145,11 @@ namespace LinkupSharp
 
         public void AddListener(string endpoint, X509Certificate2 certificate = null)
         {
+            AddListener<JsonPacketSerializer>(endpoint, certificate);
+        }
+
+        public void AddListener<T>(string endpoint, X509Certificate2 certificate = null) where T : IPacketSerializer, new()
+        {
             var uri = new Uri(endpoint);
             IPAddress address;
             switch (uri.Scheme.ToLower())
@@ -151,28 +157,28 @@ namespace LinkupSharp
                 case "tcp":
                 case "ssl":
                     if (IPAddress.TryParse(uri.Host, out address))
-                        AddListener(new TcpChannelListener(uri.Port, address, certificate));
+                        AddListener(new TcpChannelListener<T>(uri.Port, address, certificate));
                     else
                     {
                         IPAddress[] addressList = Dns.GetHostAddresses(uri.Host);
                         if (addressList != null)
                             foreach (var item in addressList)
-                                AddListener(new TcpChannelListener(uri.Port, item, certificate));
+                                AddListener(new TcpChannelListener<T>(uri.Port, item, certificate));
                         else
-                            AddListener(new TcpChannelListener(uri.Port, certificate));
+                            AddListener(new TcpChannelListener<T>(uri.Port, certificate));
                     }
                     break;
                 case "http":
                 case "https":
                     endpoint = endpoint.Replace("0.0.0.0", "+");
-                    AddListener(new WebChannelListener(endpoint));
+                    AddListener(new WebChannelListener<T>(endpoint));
                     break;
                 case "ws":
                 case "wss":
                     endpoint = endpoint.Replace("0.0.0.0", "+");
                     endpoint = endpoint.Replace("wss://", "https://");
                     endpoint = endpoint.Replace("ws://", "http://");
-                    AddListener(new WebSocketChannelListener(endpoint, certificate));
+                    AddListener(new WebSocketChannelListener<T>(endpoint, certificate));
                     break;
             }
         }

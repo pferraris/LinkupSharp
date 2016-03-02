@@ -34,63 +34,69 @@ using System.Linq;
 
 namespace LinkupSharp.Serializers
 {
-    public abstract class PacketSerializerBase : IPacketSerializer
+    public class TokenizedPacketSerializer<T> : IPacketSerializer where T : IPacketSerializer, new()
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(PacketSerializerBase));
+        private static readonly ILog log = LogManager.GetLogger(typeof(TokenizedPacketSerializer<T>));
+        private T internalSerializer;
         private List<byte> buffer;
+        private byte[] token;
 
-        public PacketSerializerBase()
+        public TokenizedPacketSerializer(byte[] token)
         {
+            this.token = token;
+            internalSerializer = new T();
             buffer = new List<byte>();
         }
 
-        public byte[] Serialize(Packet packet, byte[] token = null)
+        public byte[] Serialize(Packet packet)
         {
-            var result = Packet2Bytes(packet);
+            var result = internalSerializer.Serialize(packet);
             if (token != null)
                 result = result.Concat(token).ToArray();
             return result;
         }
 
-        public List<Packet> Deserialize(byte[] bytes, byte[] token = null)
+        public Packet Deserialize(byte[] bytes)
         {
-            var packets = new List<Packet>();
             lock (buffer)
             {
                 buffer.AddRange(bytes);
-                while (ContainsPacket(token))
+                if (ContainsPacket)
                 {
                     try
                     {
-                        byte[] packet = ReadPacket(token);
+                        byte[] packet = ReadPacket();
                         if (packet.Length > 0)
-                            packets.Add(Bytes2Packet(packet));
+                            return internalSerializer.Deserialize(packet);
                     }
                     catch (Exception ex)
                     {
-                        log.Error("Deserialization error", ex);
+                        log.Error("Cannot deserialize tokenized packet", ex);
                     }
                 }
             }
-            return packets;
+            return null;
         }
 
-        private bool ContainsPacket(byte[] token)
+        private bool ContainsPacket
         {
-            if (buffer.Count == 0) return false;
-            if (token == null) return true;
-            int start = buffer.Count - token.Length;
-            int pos;
-            while ((pos = buffer.LastIndexOf(token.First(), start)) >= 0)
+            get
             {
-                start = pos - 1;
-                if (buffer.Skip(pos).SequenceEqual(token))
-                    return true;
+                if (buffer.Count == 0) return false;
+                if (token == null) return true;
+                int start = buffer.Count - token.Length;
+                int pos;
+                while ((pos = buffer.LastIndexOf(token.First(), start)) >= 0)
+                {
+                    start = pos - 1;
+                    if (buffer.Skip(pos).SequenceEqual(token))
+                        return true;
+                }
+                return false;
             }
-            return false;
         }
 
-        private byte[] ReadPacket(byte[] token)
+        private byte[] ReadPacket()
         {
             if (token == null)
             {
@@ -98,8 +104,8 @@ namespace LinkupSharp.Serializers
                 buffer.Clear();
                 return bytes;
             }
-            int pos;
-            while ((pos = buffer.IndexOf(token.First())) >= 0)
+            int pos = 0;
+            while ((pos = buffer.IndexOf(token.First(), pos)) >= 0)
             {
                 if (buffer.Skip(pos).Take(token.Length).SequenceEqual(token))
                 {
@@ -107,11 +113,10 @@ namespace LinkupSharp.Serializers
                     buffer.RemoveRange(0, pos + token.Length);
                     return bytes;
                 }
+                else
+                    pos++;
             }
             return new byte[0];
         }
-
-        protected abstract Packet Bytes2Packet(byte[] packet);
-        protected abstract byte[] Packet2Bytes(Packet packet);
     }
 }

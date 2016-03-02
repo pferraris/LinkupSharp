@@ -40,10 +40,9 @@ using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
 {
-    public class WebSocketClientChannel : IClientChannel
+    public class WebSocketClientChannel<T> : IClientChannel where T : IPacketSerializer, new()
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketClientChannel));
-        private static readonly byte[] Token = new byte[] { 0x0007, 0x000C, 0x000B };
+        private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketClientChannel<T>));
 
         private WebSocket socket;
         private IPacketSerializer serializer;
@@ -71,9 +70,10 @@ namespace LinkupSharp.Channels
         private void SetSocket(WebSocket socket)
         {
             this.socket = socket;
-            serializer = new JsonPacketSerializer();
+            byte[] token = new byte[] { 0x0007, 0x000C, 0x000B };
+            serializer = new TokenizedPacketSerializer<T>(token);
             cancel = new CancellationTokenSource();
-            readingTask = Task.Factory.StartNew(Read, CancellationToken.None);
+            readingTask = Task.Factory.StartNew(Read);
         }
 
         private void Read()
@@ -89,53 +89,54 @@ namespace LinkupSharp.Channels
                         cancel.Cancel();
                         continue;
                     }
-                    foreach (var packet in serializer.Deserialize(buffer.Take(result.Count).ToArray(), Token))
+                    Packet packet = serializer.Deserialize(buffer.Take(result.Count).ToArray());
+                    while (packet != null)
+                    {
                         OnPacketReceived(packet);
+                        packet = serializer.Deserialize(new byte[0]);
+                    }
                 }
                 catch { }
             }
-            OnClosed();
-            Task.Factory.StartNew(() => Dispose());
         }
 
-        public void Send(Packet packet)
+        public async Task Send(Packet packet)
         {
             if ((cancel != null) && (!cancel.IsCancellationRequested))
             {
                 try
                 {
-                    lock (socket)
-                    {
-                        byte[] buffer = serializer.Serialize(packet, Token);
-                        socket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, cancel.Token);
-                    }
+                    byte[] buffer = serializer.Serialize(packet);
+                    await socket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Binary, true, cancel.Token);
                 }
                 catch (Exception ex)
                 {
                     log.Error("Sending error", ex);
-                    Close();
+                    await Close();
                 }
             }
         }
 
-        public void Close()
+        public async Task Close()
         {
             if ((cancel != null) && (!cancel.IsCancellationRequested))
+            {
                 cancel.Cancel();
+                if (readingTask != null)
+                {
+                    await readingTask;
+                    readingTask.Dispose();
+                }
+                if (socket != null)
+                    socket.Dispose();
+                cancel.Dispose();
+                OnClosed();
+            }
         }
 
         public void Dispose()
         {
-            if (readingTask != null)
-            {
-                readingTask.Wait();
-                readingTask.Dispose();
-            }
-            if (socket != null)
-                socket.Dispose();
-            readingTask = null;
-            socket = null;
-            cancel = null;
+            Close();
         }
 
         #endregion Methods
@@ -148,13 +149,13 @@ namespace LinkupSharp.Channels
         private void OnPacketReceived(Packet packet)
         {
             if (PacketReceived != null)
-                Task.Run(() => PacketReceived(this, new PacketEventArgs(packet)));
+                PacketReceived(this, new PacketEventArgs(packet));
         }
 
         private void OnClosed()
         {
             if (Closed != null)
-                Task.Run(() => Closed(this, EventArgs.Empty));
+                Closed(this, EventArgs.Empty);
         }
 
         #endregion Events

@@ -38,9 +38,9 @@ using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
 {
-    public class WebClientChannel : IClientChannel
+    public class WebClientChannel<T> : IClientChannel where T : IPacketSerializer, new()
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(WebClientChannel));
+        private static readonly ILog log = LogManager.GetLogger(typeof(WebClientChannel<T>));
         private IPacketSerializer serializer;
         private Task readingTask;
         private bool active;
@@ -62,7 +62,7 @@ namespace LinkupSharp.Channels
         {
             Id = id;
             this.serverSide = true;
-            serializer = new JsonPacketSerializer();
+            serializer = new T();
             inactivityTime = 5000;
             inactivityTimer = new Timer(state => Close(), null, inactivityTime, Timeout.Infinite);
             pending = new Queue<Packet>();
@@ -74,7 +74,7 @@ namespace LinkupSharp.Channels
             this.uri = uri;
             Id = Guid.NewGuid().ToString();
             serverSide = false;
-            serializer = new JsonPacketSerializer();
+            serializer = new T();
             poolingTime = 1000;
             inactivityTime = 5000;
             active = true;
@@ -85,8 +85,7 @@ namespace LinkupSharp.Channels
 
         internal void DataReceived(byte[] buffer)
         {
-            foreach (var packet in serializer.Deserialize(buffer))
-                OnPacketReceived(packet);
+            Task.Factory.StartNew(() => OnPacketReceived(serializer.Deserialize(buffer)));
         }
 
         internal byte[] DataPending()
@@ -133,39 +132,42 @@ namespace LinkupSharp.Channels
             }
         }
 
-        public void Send(Packet packet)
+        public async Task Send(Packet packet)
         {
             if (serverSide)
-                lock (pending)
-                    pending.Enqueue(packet);
+                await Task.Factory.StartNew(() =>
+                {
+                    lock (pending)
+                        pending.Enqueue(packet);
+                });
             else if (active)
             {
                 try
                 {
                     byte[] buffer = serializer.Serialize(packet);
-                    var webRequest = HttpWebRequest.Create(uri) as HttpWebRequest;
+                    var webRequest = WebRequest.Create(uri) as HttpWebRequest;
                     webRequest.ContentType = "text/plain";
                     webRequest.Headers.Add("ClientId", Id);
                     webRequest.Method = "POST";
                     webRequest.ContentLength = buffer.Length;
                     using (var stream = webRequest.GetRequestStream())
-                        stream.Write(buffer, 0, buffer.Length);
+                        await stream.WriteAsync(buffer, 0, buffer.Length);
                     using (HttpWebResponse webResponse = webRequest.GetResponse() as HttpWebResponse)
                     {
                         if (webResponse.StatusCode != HttpStatusCode.OK)
-                            throw new InvalidOperationException(String.Format("StatusCode: {0}", ((HttpStatusCode)webResponse.StatusCode).ToString()));
+                            throw new InvalidOperationException(string.Format("StatusCode: {0}", ((HttpStatusCode)webResponse.StatusCode).ToString()));
                         webResponse.Close();
                     }
                 }
                 catch (Exception ex)
                 {
                     log.Error("Sending error", ex);
-                    Close();
+                    await Close();
                 }
             }
         }
 
-        public void Close()
+        public async Task Close()
         {
             if (serverSide)
             {
@@ -174,7 +176,7 @@ namespace LinkupSharp.Channels
                     inactivityTimer.Change(Timeout.Infinite, Timeout.Infinite);
                     inactivityTimer.Dispose();
                 }
-                catch { throw; }
+                catch { }
                 OnClosed();
             }
             else if (active)
@@ -182,10 +184,10 @@ namespace LinkupSharp.Channels
                 active = false;
                 try
                 {
-                    readingTask.Wait();
+                    await readingTask;
                     readingTask.Dispose();
                 }
-                catch { throw; }
+                catch { }
                 OnClosed();
             }
         }
@@ -205,13 +207,13 @@ namespace LinkupSharp.Channels
         private void OnPacketReceived(Packet packet)
         {
             if (PacketReceived != null)
-                Task.Run(() => PacketReceived(this, new PacketEventArgs(packet)));
+                PacketReceived(this, new PacketEventArgs(packet));
         }
 
         private void OnClosed()
         {
             if (Closed != null)
-                Task.Run(() => Closed(this, EventArgs.Empty));
+                Closed(this, EventArgs.Empty);
         }
 
         #endregion Events

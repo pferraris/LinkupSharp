@@ -28,6 +28,7 @@
 #endregion License
 
 using System;
+using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
 {
@@ -35,7 +36,7 @@ namespace LinkupSharp.Channels
     {
         event EventHandler<PacketEventArgs> PacketReceived;
         event EventHandler<EventArgs> Closed;
-        void Send(Packet packet);
-        void Close();
+        Task Send(Packet packet);
+        Task Close();
     }
 }

@@ -33,7 +33,7 @@ using System.IO;
 
 namespace LinkupSharp.Serializers
 {
-    public class ProtoPacketSerializer : PacketSerializerBase
+    public class ProtoPacketSerializer : IPacketSerializer
     {
         static ProtoPacketSerializer()
         {
@@ -47,12 +47,12 @@ namespace LinkupSharp.Serializers
             packetDefinition.AddField(4, "TypeName");
         }
 
-        protected override Packet Bytes2Packet(byte[] packet)
+        public Packet Deserialize(byte[] packet)
         {
             return Serializer.Deserialize<Packet>(new MemoryStream(packet));
         }
 
-        protected override byte[] Packet2Bytes(Packet packet)
+        public byte[] Serialize(Packet packet)
         {
             MemoryStream stream = new MemoryStream();
             Serializer.Serialize(stream, packet);

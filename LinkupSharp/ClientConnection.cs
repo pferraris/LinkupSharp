@@ -30,6 +30,7 @@
 using LinkupSharp.Authentication;
 using LinkupSharp.Channels;
 using LinkupSharp.Modules;
+using LinkupSharp.Serializers;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -172,20 +173,25 @@ namespace LinkupSharp
 
         public void Connect(string endpoint, X509Certificate2 certificate = null)
         {
+            Connect<JsonPacketSerializer>(endpoint, certificate);
+        }
+
+        public void Connect<T>(string endpoint, X509Certificate2 certificate = null) where T : IPacketSerializer, new()
+        {
             var uri = new Uri(endpoint);
             switch (uri.Scheme.ToLower())
             {
                 case "tcp":
                 case "ssl":
-                    Connect(new TcpClientChannel(uri.Host, uri.Port, certificate));
+                    Connect(new TcpClientChannel<T>(uri.Host, uri.Port, certificate));
                     break;
                 case "http":
                 case "https":
-                    Connect(new WebClientChannel(uri.AbsoluteUri));
+                    Connect(new WebClientChannel<T>(uri.AbsoluteUri));
                     break;
                 case "ws":
                 case "wss":
-                    Connect(new WebSocketClientChannel(uri.AbsoluteUri, certificate));
+                    Connect(new WebSocketClientChannel<T>(uri.AbsoluteUri, certificate));
                     break;
             }
         }

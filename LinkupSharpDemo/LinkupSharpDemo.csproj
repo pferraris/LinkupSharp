@@ -56,6 +56,10 @@
     <None Include="Resources\issuer.cer" />
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\LinkupSharp.Protobuf\LinkupSharp.Protobuf.csproj">
+      <Project>{6d7d901b-79da-4551-92e2-53936397ad09}</Project>
+      <Name>LinkupSharp.Protobuf</Name>
+    </ProjectReference>
     <ProjectReference Include="..\LinkupSharp\LinkupSharp.csproj">
       <Project>{83453473-bec5-4d8c-b203-01c937297eb6}</Project>
       <Name>LinkupSharp</Name>

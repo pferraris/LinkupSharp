@@ -27,21 +27,34 @@
 */
 #endregion License
 
+using log4net;
 using Newtonsoft.Json;
+using System;
 using System.Text;
 
 namespace LinkupSharp.Serializers
 {
-    public class JsonPacketSerializer : PacketSerializerBase
+    public class JsonPacketSerializer : IPacketSerializer
     {
-        protected override Packet Bytes2Packet(byte[] packet)
-        {
-            return JsonConvert.DeserializeObject<Packet>(Encoding.UTF8.GetString(packet));
-        }
+        private static readonly ILog log = LogManager.GetLogger(typeof(JsonPacketSerializer));
 
-        protected override byte[] Packet2Bytes(Packet packet)
+        public byte[] Serialize(Packet packet)
         {
             return Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(packet));
+        }
+
+        public Packet Deserialize(byte[] packet)
+        {
+            try
+            {
+                if (packet.Length > 0)
+                    return JsonConvert.DeserializeObject<Packet>(Encoding.UTF8.GetString(packet));
+            }
+            catch (Exception ex)
+            {
+                log.Error("Cannot deserialize JSON packet", ex);
+            }
+            return null;
         }
     }
 }

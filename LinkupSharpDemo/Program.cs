@@ -1,12 +1,14 @@
 ﻿using LinkupSharp;
 using LinkupSharp.Authentication;
 using LinkupSharp.Modules;
+using LinkupSharp.Serializers;
 using log4net.Config;
 using System;
 using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
+using System.Threading.Tasks;
 
 namespace LinkupSharpDemo
 {
@@ -19,22 +21,28 @@ namespace LinkupSharpDemo
             certificateCer = new X509Certificate2(LoadResource("LinkupSharpDemo.Resources.certificate.cer"));
 
             var server = new TestServer();
-            server.AddListener("tcp://0.0.0.0:5656/");
-            server.AddListener("http://0.0.0.0:5657/");
-            server.AddListener("wss://localhost:5658/", certificatePfx);
+            server.AddListener("ssl://0.0.0.0:5650/", certificatePfx);
+            server.AddListener("http://0.0.0.0:5651/", certificatePfx);
+            server.AddListener("wss://localhost:5652/", certificatePfx);
+            server.AddListener<ProtoPacketSerializer>("ssl://0.0.0.0:5653/", certificatePfx);
+            server.AddListener<ProtoPacketSerializer>("http://0.0.0.0:5654/", certificatePfx);
+            server.AddListener<ProtoPacketSerializer>("wss://localhost:5655/", certificatePfx);
 
             var client1 = new TestClient();
             client1.Connected += (sender, e) => client1.Authenticate("client1@test");
             client1.Authenticated += client1_Authenticated;
-            client1.Connect(GetEndpoint(), certificateCer);
+            Connect(client1, certificateCer);
             Console.ReadLine();
         }
 
-        private static string GetEndpoint()
+        private static void Connect(ClientConnection client, X509Certificate2 certificate)
         {
-            //return "tcp://localhost:5656/";
-            //return "http://localhost:5657/";
-            return "wss://localhost:5658/";
+            //client.Connect("ssl://localhost:5650/", certificate);
+            //client.Connect("http://localhost:5651/", certificate);
+            //client.Connect("wss://localhost:5652/", certificate);
+            client.Connect<ProtoPacketSerializer>("ssl://localhost:5653/", certificate);
+            //client.Connect<ProtoPacketSerializer>("http://localhost:5654/", certificate);
+            //client.Connect<ProtoPacketSerializer>("wss://localhost:5655/", certificate);
         }
 
         private static X509Certificate2 certificatePfx;
@@ -78,11 +86,11 @@ namespace LinkupSharpDemo
                 if (!reconnected)
                 {
                     reconnected = true;
-                    client2.Connect(GetEndpoint(), certificateCer);
+                    Connect(client2, certificateCer);
                 }
             };
 
-            client2.Connect(GetEndpoint(), certificateCer);
+            Connect(client2, certificateCer);
         }
     }
 

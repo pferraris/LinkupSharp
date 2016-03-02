@@ -27,13 +27,11 @@
 */
 #endregion License
 
-using System.Collections.Generic;
-
 namespace LinkupSharp.Serializers
 {
     public interface IPacketSerializer
     {
-        byte[] Serialize(Packet packet, byte[] token = null);
-        List<Packet> Deserialize(byte[] bytes, byte[] token = null);
+        byte[] Serialize(Packet packet);
+        Packet Deserialize(byte[] bytes);
     }
 }

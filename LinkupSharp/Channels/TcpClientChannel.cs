@@ -40,16 +40,15 @@ using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
 {
-    public class TcpClientChannel : IClientChannel
+    public class TcpClientChannel<T> : IClientChannel where T : IPacketSerializer, new()
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(TcpClientChannel));
-        private static readonly byte[] Token = new byte[] { 0x0007, 0x000C, 0x000B };
+        private static readonly ILog log = LogManager.GetLogger(typeof(TcpClientChannel<T>));
         private Task readingTask;
         private bool active;
-        private TcpClient Socket { get; set; }
-        private IPacketSerializer Serializer { get; set; }
-        private Stream Stream { get; set; }
-        private bool ServerSide { get; set; }
+        private TcpClient socket;
+        private IPacketSerializer serializer;
+        private Stream stream;
+        private bool serverSide;
         private X509Certificate2 certificate;
 
         public TcpClientChannel(string host, int port)
@@ -72,10 +71,11 @@ namespace LinkupSharp.Channels
 
         internal void SetSocket(TcpClient socket, bool serverSide = false)
         {
-            ServerSide = serverSide;
-            Serializer = new JsonPacketSerializer();
-            Socket = socket;
-            Stream = GetStream();
+            this.serverSide = serverSide;
+            byte[] token = new byte[] { 0x0007, 0x000C, 0x000B };
+            serializer = new TokenizedPacketSerializer<T>(token);
+            this.socket = socket;
+            stream = GetStream();
             active = true;
             readingTask = Task.Factory.StartNew(Read);
         }
@@ -85,19 +85,19 @@ namespace LinkupSharp.Channels
             Stream stream = null;
             if (certificate == null)
             {
-                stream = Socket.GetStream();
+                stream = socket.GetStream();
             }
             else
             {
-                if (ServerSide)
+                if (serverSide)
                 {
-                    stream = new SslStream(Socket.GetStream(), false);
+                    stream = new SslStream(socket.GetStream(), false);
                     (stream as SslStream).AuthenticateAsServer(certificate);
                 }
                 else
                 {
-                    stream = new SslStream(Socket.GetStream(), false, CertificateValidation);
-                    string hostname = Socket.Client.RemoteEndPoint.ToString();
+                    stream = new SslStream(socket.GetStream(), false, CertificateValidation);
+                    string hostname = socket.Client.RemoteEndPoint.ToString();
                     if (hostname.Contains(":"))
                         hostname = hostname.Substring(0, hostname.IndexOf(':'));
                     (stream as SslStream).AuthenticateAsClient(hostname);
@@ -116,14 +116,18 @@ namespace LinkupSharp.Channels
         {
             while (active)
             {
-                if (Socket.Available > 0)
+                if (socket.Available > 0)
                 {
                     try
                     {
                         byte[] buffer = new byte[65536];
-                        int count = Stream.Read(buffer, 0, buffer.Length);
-                        foreach (var packet in Serializer.Deserialize(buffer.Take(count).ToArray(), Token))
+                        int count = stream.Read(buffer, 0, buffer.Length);
+                        Packet packet = serializer.Deserialize(buffer.Take(count).ToArray());
+                        while (packet != null)
+                        {
                             OnPacketReceived(packet);
+                            packet = serializer.Deserialize(new byte[0]);
+                        }
                     }
                     catch (Exception ex)
                     {
@@ -135,17 +139,14 @@ namespace LinkupSharp.Channels
             }
         }
 
-        public void Send(Packet packet)
+        public async Task Send(Packet packet)
         {
             if (active)
                 try
                 {
-                    lock (Stream)
-                    {
-                        byte[] buffer = Serializer.Serialize(packet, Token);
-                        Stream.Write(buffer, 0, buffer.Length);
-                        Stream.Flush();
-                    }
+                    byte[] buffer = serializer.Serialize(packet);
+                    await stream.WriteAsync(buffer, 0, buffer.Length);
+                    stream.Flush();
                 }
                 catch (Exception ex)
                 {
@@ -154,22 +155,22 @@ namespace LinkupSharp.Channels
                 }
         }
 
-        public void Close()
+        public async Task Close()
         {
             if (active)
             {
                 active = false;
                 try
                 {
-                    readingTask.Wait();
+                    await readingTask;
                     readingTask.Dispose();
                 }
                 catch { }
                 try
                 {
-                    Stream.Close();
-                    Stream.Dispose();
-                    Socket.Close();
+                    stream.Close();
+                    stream.Dispose();
+                    socket.Close();
                 }
                 catch { }
                 OnClosed();
@@ -191,13 +192,13 @@ namespace LinkupSharp.Channels
         private void OnPacketReceived(Packet packet)
         {
             if (PacketReceived != null)
-                Task.Run(() => PacketReceived(this, new PacketEventArgs(packet)));
+                PacketReceived(this, new PacketEventArgs(packet));
         }
 
         private void OnClosed()
         {
             if (Closed != null)
-                Task.Run(() => Closed(this, EventArgs.Empty));
+                Closed(this, EventArgs.Empty);
         }
 
         #endregion Events

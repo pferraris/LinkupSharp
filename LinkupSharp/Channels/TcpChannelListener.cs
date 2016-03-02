@@ -27,6 +27,7 @@
 */
 #endregion License
 
+using LinkupSharp.Serializers;
 using log4net;
 using System;
 using System.Net;
@@ -37,9 +38,9 @@ using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
 {
-    public class TcpChannelListener : IChannelListener
+    public class TcpChannelListener<T> : IChannelListener where T : IPacketSerializer, new()
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(TcpChannelListener));
+        private static readonly ILog log = LogManager.GetLogger(typeof(TcpChannelListener<T>));
         public int Port { get; private set; }
         public IPAddress Address { get; private set; }
 
@@ -114,7 +115,7 @@ namespace LinkupSharp.Channels
         {
             try
             {
-                TcpClientChannel client = new TcpClientChannel(certificate);
+                var client = new TcpClientChannel<T>(certificate);
                 client.SetSocket(socket, true);
                 return client;
             }
@@ -139,8 +140,7 @@ namespace LinkupSharp.Channels
         {
             if (clientChannel == null) return;
             if (ClientConnected != null)
-                Task.Factory.StartNew(() =>
-                ClientConnected(this, new ClientChannelEventArgs(clientChannel)));
+                ClientConnected(this, new ClientChannelEventArgs(clientChannel));
         }
 
         #endregion Events
