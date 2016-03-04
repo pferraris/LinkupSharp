@@ -27,7 +27,7 @@
 */
 #endregion License
 
-using LinkupSharp.Authentication;
+using LinkupSharp.Security;
 using LinkupSharp.Channels;
 using LinkupSharp.Modules;
 using LinkupSharp.Serializers;
@@ -35,6 +35,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Security.Cryptography.X509Certificates;
+using LinkupSharp.Security.Authentication;
 
 namespace LinkupSharp
 {

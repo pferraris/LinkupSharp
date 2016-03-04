@@ -1,8 +1,8 @@
 ﻿using System.Collections.Generic;
 
-namespace LinkupSharp.Authentication
+namespace LinkupSharp.Security
 {
-    public class MemorySessionRepository : LinkupSharp.Authentication.ISessionRepository
+    public class MemorySessionRepository : LinkupSharp.Security.ISessionRepository
     {
         private Dictionary<string, SessionContext> sessions;
 

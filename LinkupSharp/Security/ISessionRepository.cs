@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace LinkupSharp.Authentication
+namespace LinkupSharp.Security
 {
     public interface ISessionRepository
     {

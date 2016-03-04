@@ -27,14 +27,20 @@
 */
 #endregion License
 
-namespace LinkupSharp.Authentication
+namespace LinkupSharp.Security.Authentication
 {
-    public class AnonymousAuthenticator : IAuthenticator
+    public class Authenticated
     {
-        public SessionContext Authenticate(Credentials credentials)
+        public SessionContext SessionContext { get; private set; }
+
+        public Authenticated(SessionContext sessionContext)
         {
-            if (credentials == null) return null;
-            return new SessionContext(credentials.Id);
+            SessionContext = sessionContext;
+        }
+
+        public override string ToString()
+        {
+            return SessionContext.ToString();
         }
     }
 }

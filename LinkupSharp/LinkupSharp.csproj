@@ -51,14 +51,15 @@
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Authentication\Authenticated.cs" />
-    <Compile Include="Authentication\AuthenticationFailed.cs" />
-    <Compile Include="Authentication\AnonymousAuthenticator.cs" />
-    <Compile Include="Authentication\Credentials.cs" />
-    <Compile Include="Authentication\ISessionRepository.cs" />
-    <Compile Include="Authentication\SessionContextEventArgs.cs" />
-    <Compile Include="Authentication\IAuthenticator.cs" />
-    <Compile Include="Authentication\MemorySessionRepository.cs" />
+    <Compile Include="Security\Authentication\Authenticated.cs" />
+    <Compile Include="Security\Authentication\AuthenticationFailed.cs" />
+    <Compile Include="Security\Authentication\AnonymousAuthenticator.cs" />
+    <Compile Include="Security\Authorization\IAuthorizer.cs" />
+    <Compile Include="Security\Credentials.cs" />
+    <Compile Include="Security\ISessionRepository.cs" />
+    <Compile Include="Security\SessionContextEventArgs.cs" />
+    <Compile Include="Security\Authentication\IAuthenticator.cs" />
+    <Compile Include="Security\MemorySessionRepository.cs" />
     <Compile Include="Channels\IChannelListener.cs" />
     <Compile Include="Channels\IClientChannel.cs" />
     <Compile Include="Channels\WebChannelListener.cs" />
@@ -72,10 +73,10 @@
     <Compile Include="DisconnectedEventArgs.cs" />
     <Compile Include="Connected.cs" />
     <Compile Include="ConnectionManager.cs" />
-    <Compile Include="Authentication\SessionContext.cs" />
-    <Compile Include="Authentication\CredentialsEventArgs.cs" />
-    <Compile Include="Modules\AuthorizedAttribute.cs" />
-    <Compile Include="Modules\AuthenticatedAttribute.cs" />
+    <Compile Include="Security\SessionContext.cs" />
+    <Compile Include="Security\CredentialsEventArgs.cs" />
+    <Compile Include="Security\Authorization\AuthorizedAttribute.cs" />
+    <Compile Include="Security\Authentication\AuthenticatedAttribute.cs" />
     <Compile Include="Modules\IClientModule.cs">
       <SubType>Code</SubType>
     </Compile>

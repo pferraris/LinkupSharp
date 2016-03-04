@@ -29,15 +29,22 @@
 
 using System;
 
-namespace LinkupSharp.Authentication
+namespace LinkupSharp.Security
 {
-    public class SessionContextEventArgs : EventArgs
+    public class SessionContext
     {
-        public SessionContext SessionContext { get; private set; }
+        public Id Id { get; private set; }
+        public string Token { get; private set; }
 
-        public SessionContextEventArgs(SessionContext sessionContext)
+        public SessionContext(Id id, string token = null)
         {
-            SessionContext = sessionContext;
+            Id = id;
+            Token = token ?? Guid.NewGuid().ToString();
+        }
+
+        public override string ToString()
+        {
+            return Id;
         }
     }
 }

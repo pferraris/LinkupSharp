@@ -1,6 +1,6 @@
 ﻿using LinkupSharp;
-using LinkupSharp.Authentication;
 using LinkupSharp.Modules;
+using LinkupSharp.Security.Authentication;
 using LinkupSharp.Serializers;
 using log4net.Config;
 using System;
@@ -8,7 +8,6 @@ using System.Linq;
 using System.Reflection;
 using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace LinkupSharpDemo
 {
@@ -173,7 +172,7 @@ namespace LinkupSharpDemo
 
     public class Message
     {
-        public string Text { get; set; }
+        public string Text { get; private set; }
 
         public Message(string text)
         {

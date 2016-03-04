@@ -27,7 +27,7 @@
 */
 #endregion License
 
-using LinkupSharp.Authentication;
+using LinkupSharp.Security;
 using LinkupSharp.Channels;
 using LinkupSharp.Modules;
 using LinkupSharp.Serializers;
@@ -41,6 +41,8 @@ using System.Net;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using LinkupSharp.Security.Authentication;
+using LinkupSharp.Security.Authorization;
 
 namespace LinkupSharp
 {
@@ -70,6 +72,7 @@ namespace LinkupSharp
         {
             listeners = new List<IChannelListener>();
             authenticators = new List<IAuthenticator>();
+            authorizers = new List<IAuthorizer>();
             modules = new List<IServerModule>();
 
             anonymous = new AnonymousConnections();
@@ -127,9 +130,9 @@ namespace LinkupSharp
         #region Listeners
 
         private List<IChannelListener> listeners;
-        public ReadOnlyCollection<IChannelListener> Listeners
+        public IEnumerable<IChannelListener> Listeners
         {
-            get { return listeners.AsReadOnly(); }
+            get { return listeners.ToArray(); }
         }
 
         public void AddListener(IChannelListener listener)
@@ -196,18 +199,18 @@ namespace LinkupSharp
 
         public void ClearListeners()
         {
-            foreach (var listener in Listeners.ToArray())
+            foreach (var listener in Listeners)
                 RemoveListener(listener);
         }
 
         #endregion Listeners
 
-        #region Authenticators
+        #region Security
 
         private List<IAuthenticator> authenticators;
-        public ReadOnlyCollection<IAuthenticator> Authenticators
+        public IEnumerable<IAuthenticator> Authenticators
         {
-            get { return authenticators.AsReadOnly(); }
+            get { return authenticators.ToArray(); }
         }
 
         public void AddAuthenticator(IAuthenticator authenticator)
@@ -226,18 +229,61 @@ namespace LinkupSharp
 
         public void ClearAuthenticators()
         {
-            foreach (var authenticator in Authenticators.ToArray())
+            foreach (var authenticator in Authenticators)
                 RemoveAuthenticator(authenticator);
         }
 
-        #endregion Authenticators
+        public bool Authenticate(ClientConnection client, Credentials credentials)
+        {
+            foreach (var authenticator in Authenticators)
+                if (client.Authenticate(authenticator.Authenticate(credentials)))
+                    return true;
+            return false;
+        }
+
+        private List<IAuthorizer> authorizers;
+        public IEnumerable<IAuthorizer> Authorizers
+        {
+            get { return authorizers.ToArray(); }
+        }
+
+        public void AddAuthorizer(IAuthorizer authorizer)
+        {
+            if (authorizer == null) throw new ArgumentNullException("Authorizer cannot be null.");
+            if (!authorizers.Contains(authorizer))
+                authorizers.Add(authorizer);
+        }
+
+        public void RemoveAuthorizer(IAuthorizer authorizer)
+        {
+            if (authorizer == null) throw new ArgumentNullException("Authorizer cannot be null.");
+            if (authorizers.Contains(authorizer))
+                authorizers.Remove(authorizer);
+        }
+
+        public void ClearAuthorizers()
+        {
+            foreach (var authorizer in Authorizers)
+                RemoveAuthorizer(authorizer);
+        }
+
+        public bool IsAuthorized(ClientConnection client, object[] roles)
+        {
+            if (!authorizers.Any()) return true;
+            foreach (var authorizer in Authorizers)
+                if (authorizer.IsAuthorized(client.Id, roles))
+                    return true;
+            return false;
+        }
+
+        #endregion Security
 
         #region Modules
 
         private List<IServerModule> modules;
-        public ReadOnlyCollection<IServerModule> Modules
+        public IEnumerable<IServerModule> Modules
         {
-            get { return modules.AsReadOnly(); }
+            get { return modules.ToArray(); }
         }
 
         public void AddModule(IServerModule module)
@@ -259,7 +305,7 @@ namespace LinkupSharp
 
         public void ClearModules()
         {
-            foreach (var module in Modules.ToArray())
+            foreach (var module in Modules)
                 RemoveModule(module);
         }
 
@@ -333,51 +379,48 @@ namespace LinkupSharp
             ClientConnection client = sender as ClientConnection;
             ClientConnection oldClient = null;
             Id currentId = client.Id;
-            foreach (var authenticator in Authenticators)
+            if (Authenticate(client, e.Credentials))
             {
-                if (client.Authenticate(authenticator.Authenticate(e.Credentials)))
+                sessions.Add(client.SessionContext);
+                lock (clients)
                 {
-                    sessions.Add(client.SessionContext);
-                    lock (clients)
+                    // Si se esta abriendo una nueva sesión para un usuario conectado, pero con otra conexión. Debe desconectar la existente.
+                    if ((clients.ContainsKey(client.Id)) && (clients[client.Id] != client))
                     {
-                        // Si se esta abriendo una nueva sesión para un usuario conectado, pero con otra conexión. Debe desconectar la existente.
-                        if ((clients.ContainsKey(client.Id)) && (clients[client.Id] != client))
-                        {
-                            oldClient = clients[client.Id];
-                            sessions.Remove(oldClient.SessionContext);
-                            lock (inactives)
-                                if (inactives.ContainsKey(oldClient))
-                                    inactives.Remove(oldClient);
-                                else
-                                    oldClient.Disconnect(Reasons.AnotherSessionOpened);
-                            clients.Remove(client.Id);
-                        }
-                        // Si se trata de un cambio de usuario, debe quitar el Id viejo de la lista de clientes.
-                        if ((currentId != null) && (!currentId.Equals(client.Id)))
-                            if (clients.ContainsKey(currentId))
-                            {
-                                sessions.Remove(clients[currentId].SessionContext);
-                                lock (clients)
-                                    clients.Remove(currentId);
-                                OnClientDisconnected(client, currentId);
-                            }
-                        // En caso de no estar el Id en la lista de clientes lo agrega.
-                        if (!clients.ContainsKey(client.Id))
-                        {
-                            lock (clients)
-                                clients.Add(client.Id, client);
-                            if (oldClient == null)
-                                OnClientConnected(client, client.Id);
+                        oldClient = clients[client.Id];
+                        sessions.Remove(oldClient.SessionContext);
+                        lock (inactives)
+                            if (inactives.ContainsKey(oldClient))
+                                inactives.Remove(oldClient);
                             else
-                                OnClientReconnected(client, client.Id);
-                        }
+                                oldClient.Disconnect(Reasons.AnotherSessionOpened);
+                        clients.Remove(client.Id);
                     }
-                    // En caso de estar el cliente en la lista de pendientes, lo quita.
-                    if (anonymous.ContainsKey(client))
-                        lock (anonymous)
-                            anonymous.Remove(client);
-                    return;
+                    // Si se trata de un cambio de usuario, debe quitar el Id viejo de la lista de clientes.
+                    if ((currentId != null) && (!currentId.Equals(client.Id)))
+                        if (clients.ContainsKey(currentId))
+                        {
+                            sessions.Remove(clients[currentId].SessionContext);
+                            lock (clients)
+                                clients.Remove(currentId);
+                            OnClientDisconnected(client, currentId);
+                        }
+                    // En caso de no estar el Id en la lista de clientes lo agrega.
+                    if (!clients.ContainsKey(client.Id))
+                    {
+                        lock (clients)
+                            clients.Add(client.Id, client);
+                        if (oldClient == null)
+                            OnClientConnected(client, client.Id);
+                        else
+                            OnClientReconnected(client, client.Id);
+                    }
                 }
+                // En caso de estar el cliente en la lista de pendientes, lo quita.
+                if (anonymous.ContainsKey(client))
+                    lock (anonymous)
+                        anonymous.Remove(client);
+                return;
             }
             client.Send(new AuthenticationFailed(e.Credentials.Id));
         }

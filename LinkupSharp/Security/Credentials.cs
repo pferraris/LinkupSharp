@@ -27,7 +27,7 @@
 */
 #endregion License
 
-namespace LinkupSharp.Authentication
+namespace LinkupSharp.Security
 {
     public class Credentials
     {

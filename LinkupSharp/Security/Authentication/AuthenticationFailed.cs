@@ -27,20 +27,20 @@
 */
 #endregion License
 
-namespace LinkupSharp.Authentication
+namespace LinkupSharp.Security.Authentication
 {
-    public class Authenticated
+    public class AuthenticationFailed
     {
-        public SessionContext SessionContext { get; private set; }
+        public Id Id { get; private set; }
 
-        public Authenticated(SessionContext sessionContext)
+        public AuthenticationFailed(Id id)
         {
-            SessionContext = sessionContext;
+            Id = id;
         }
 
         public override string ToString()
         {
-            return SessionContext.ToString();
+            return Id;
         }
     }
 }

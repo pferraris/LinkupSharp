@@ -27,9 +27,9 @@
 */
 #endregion License
 
-using System;
+using LinkupSharp.Security.Authentication;
 
-namespace LinkupSharp.Modules
+namespace LinkupSharp.Security.Authorization
 {
     public class AuthorizedAttribute : AuthenticatedAttribute
     {

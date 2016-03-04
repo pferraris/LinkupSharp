@@ -27,6 +27,8 @@
 */
 #endregion License
 
+using LinkupSharp.Security.Authentication;
+using LinkupSharp.Security.Authorization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -38,20 +40,24 @@ namespace LinkupSharp.Modules
 
         #region Implements IServerPacketInterceptor
 
-        public virtual void OnAdded(ConnectionManager manager) { }
+        private ConnectionManager manager;
+
+        public virtual void OnAdded(ConnectionManager manager)
+        {
+            this.manager = manager;
+        }
 
         public bool Process(Packet packet, ClientConnection client, ConnectionManager manager)
         {
+            if (manager == null) return false;
             foreach (var handler in PacketHandlers)
                 if (packet.Is(handler.Item1))
                 {
                     var attributes = handler.Item2.Method.GetCustomAttributes(typeof(AuthenticatedAttribute), true);
                     if ((!attributes.Any()) || (client.SessionContext != null))
                     {
-                        var roles = attributes.Where(x => typeof(AuthorizedAttribute).IsAssignableFrom(x.GetType()))
-                                              .Cast<AuthorizedAttribute>()
-                                              .SelectMany(x => x.Roles).ToArray();
-                        if ((!roles.Any()) || (client.SessionContext.IsInRole(roles)))
+                        var roles = attributes.OfType<AuthorizedAttribute>().SelectMany(x => x.Roles).ToArray();
+                        if ((!roles.Any()) || (manager.IsAuthorized(client, roles)))
                             if (handler.Item2(packet, client, manager))
                                 return true;
                     }

@@ -29,9 +29,15 @@
 
 using System;
 
-namespace LinkupSharp.Modules
+namespace LinkupSharp.Security
 {
-    public class AuthenticatedAttribute : Attribute
+    public class CredentialsEventArgs : EventArgs
     {
+        public Credentials Credentials { get; private set; }
+
+        public CredentialsEventArgs(Credentials credentials)
+        {
+            Credentials = credentials;
+        }
     }
 }

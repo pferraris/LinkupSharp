@@ -27,10 +27,11 @@
 */
 #endregion License
 
-namespace LinkupSharp.Authentication
+using System;
+
+namespace LinkupSharp.Security.Authentication
 {
-    public interface IAuthenticator
+    public class AuthenticatedAttribute : Attribute
     {
-        SessionContext Authenticate(Credentials credentials);
     }
 }

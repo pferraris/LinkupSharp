@@ -27,7 +27,8 @@
 */
 #endregion License
 
-using LinkupSharp.Authentication;
+using LinkupSharp.Security;
+using LinkupSharp.Security.Authentication;
 
 namespace LinkupSharp.Modules
 {
