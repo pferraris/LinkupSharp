@@ -47,13 +47,13 @@ namespace LinkupSharp.Modules
 
         private bool HandleSignIn(Packet packet, ClientConnection client)
         {
-            client.OnSignInRequired(packet.GetContent<SignIn>().Credentials);
+            client.OnSignInRequired(packet.GetContent() as SignIn);
             return true;
         }
 
         private bool HandleSignOut(Packet packet, ClientConnection client)
         {
-            client.OnSignOutRequired(packet.GetContent<SignOut>().Session);
+            client.OnSignOutRequired(packet.GetContent() as SignOut);
             return true;
         }
 

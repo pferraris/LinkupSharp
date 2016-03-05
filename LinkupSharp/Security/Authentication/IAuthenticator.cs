@@ -31,6 +31,6 @@ namespace LinkupSharp.Security.Authentication
 {
     public interface IAuthenticator
     {
-        Session Authenticate(Credentials credentials);
+        Session Authenticate(SignIn signIn);
     }
 }

@@ -58,7 +58,6 @@
     <Compile Include="Security\Authentication\SignIn.cs" />
     <Compile Include="Security\Authentication\SignOut.cs" />
     <Compile Include="Security\Authorization\IAuthorizer.cs" />
-    <Compile Include="Security\Credentials.cs" />
     <Compile Include="Security\ISessionRepository.cs" />
     <Compile Include="Security\SessionEventArgs.cs" />
     <Compile Include="Security\Authentication\IAuthenticator.cs" />
@@ -77,7 +76,7 @@
     <Compile Include="Connected.cs" />
     <Compile Include="ConnectionManager.cs" />
     <Compile Include="Security\Session.cs" />
-    <Compile Include="Security\CredentialsEventArgs.cs" />
+    <Compile Include="Security\Authentication\SignInEventArgs.cs" />
     <Compile Include="Security\Authorization\AuthorizedAttribute.cs" />
     <Compile Include="Security\Authentication\AuthenticatedAttribute.cs" />
     <Compile Include="Modules\IClientModule.cs">

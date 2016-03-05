@@ -29,15 +29,15 @@
 
 using System;
 
-namespace LinkupSharp.Security
+namespace LinkupSharp.Security.Authentication
 {
-    public class CredentialsEventArgs : EventArgs
+    public class SignInEventArgs : EventArgs
     {
-        public Credentials Credentials { get; private set; }
+        public SignIn SignIn { get; private set; }
 
-        public CredentialsEventArgs(Credentials credentials)
+        public SignInEventArgs(SignIn signIn)
         {
-            Credentials = credentials;
+            SignIn = signIn;
         }
     }
 }

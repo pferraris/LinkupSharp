@@ -174,10 +174,10 @@ namespace LinkupSharp
                 RemoveAuthenticator(authenticator);
         }
 
-        public bool Authenticate(ClientConnection client, Credentials credentials)
+        public bool Authenticate(ClientConnection client, SignIn signIn)
         {
             foreach (var authenticator in Authenticators)
-                if (client.Authenticate(authenticator.Authenticate(credentials)))
+                if (client.Authenticate(authenticator.Authenticate(signIn)))
                     return true;
             return false;
         }
@@ -275,17 +275,17 @@ namespace LinkupSharp
             }
         }
 
-        private void client_SignInRequired(object sender, CredentialsEventArgs e)
+        private void client_SignInRequired(object sender, SignInEventArgs e)
         {
             ClientConnection client = sender as ClientConnection;
             if (client.IsAuthenticated) client.CloseSession(client.Session);
-            if (Authenticate(client, e.Credentials))
+            if (Authenticate(client, e.SignIn))
             {
                 sessions.Add(client.Session);
                 OnClientConnected(client, client.Id);
                 return;
             }
-            client.Send(new AuthenticationFailed(e.Credentials.Id));
+            client.Send(new AuthenticationFailed(e.SignIn.Id));
         }
 
         private void client_SignOutRequired(object sender, SessionEventArgs e)

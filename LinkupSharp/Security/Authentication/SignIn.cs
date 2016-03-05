@@ -31,16 +31,16 @@ namespace LinkupSharp.Security.Authentication
 {
     public class SignIn
     {
-        public Credentials Credentials { get; private set; }
+        public Id Id { get; private set; }
 
-        public SignIn(Credentials credentials)
+        public SignIn(Id id)
         {
-            Credentials = credentials;
+            Id = id;
         }
 
         public override string ToString()
         {
-            return Credentials.ToString();
+            return Id;
         }
     }
 }

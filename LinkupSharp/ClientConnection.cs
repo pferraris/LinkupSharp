@@ -114,23 +114,23 @@ namespace LinkupSharp
 
         public void SignIn(string username, string domain)
         {
-            SignIn(new Credentials(new Id(username, domain)));
+            SignIn(new SignIn(new Id(username, domain)));
         }
 
         public void SignIn(string id)
         {
-            SignIn(new Credentials(id));
+            SignIn(new SignIn(id));
         }
 
         public void SignIn(Id id)
         {
-            SignIn(new Credentials(id));
+            SignIn(new SignIn(id));
         }
 
-        public void SignIn(Credentials credentials)
+        public void SignIn(SignIn signIn)
         {
             serverSide = false;
-            Send(new SignIn(credentials));
+            Send(signIn);
         }
 
         public void SignOut(Session session)
@@ -253,7 +253,7 @@ namespace LinkupSharp
 
         #region Events
 
-        internal event EventHandler<CredentialsEventArgs> SignInRequired;
+        internal event EventHandler<SignInEventArgs> SignInRequired;
         internal event EventHandler<SessionEventArgs> SignOutRequired;
         internal event EventHandler<SessionEventArgs> RestoreSessionRequired;
         public event EventHandler<EventArgs> Connected;
@@ -280,16 +280,16 @@ namespace LinkupSharp
                 Connected(this, EventArgs.Empty);
         }
 
-        protected internal virtual void OnSignInRequired(Credentials credentials)
+        protected internal virtual void OnSignInRequired(SignIn signIn)
         {
             if (SignInRequired != null)
-                SignInRequired(this, new CredentialsEventArgs(credentials));
+                SignInRequired(this, new SignInEventArgs(signIn));
         }
 
-        protected internal virtual void OnSignOutRequired(Session session)
+        protected internal virtual void OnSignOutRequired(SignOut signOut)
         {
             if (SignOutRequired != null)
-                SignOutRequired(this, new SessionEventArgs(session));
+                SignOutRequired(this, new SessionEventArgs(signOut.Session));
         }
 
         protected internal void OnRestoreSessionRequired(Session session)
