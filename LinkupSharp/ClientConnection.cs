@@ -308,8 +308,8 @@ namespace LinkupSharp
         protected internal virtual void OnSignedOut(Session session, bool current)
         {
             if (current) Session = null;
-            if (SignedIn != null)
-                SignedIn(this, EventArgs.Empty);
+            if (SignedOut != null)
+                SignedOut(this, EventArgs.Empty);
         }
 
         protected internal virtual void OnAuthenticationFailed()
