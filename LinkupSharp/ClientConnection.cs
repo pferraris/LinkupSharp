@@ -42,10 +42,10 @@ namespace LinkupSharp
     public class ClientConnection
     {
         internal IClientChannel Channel { get; private set; }
-        public SessionContext SessionContext { get; private set; }
-        public Id Id { get { return SessionContext != null ? SessionContext.Id : null; } }
+        public Session Session { get; private set; }
+        public Id Id { get { return Session != null ? Session.Id : null; } }
         public bool IsConnected { get; private set; }
-        public bool IsAuthenticated { get { return SessionContext != null; } }
+        public bool IsAuthenticated { get { return Session != null; } }
 
         private Disconnected disconnected;
         private bool serverSide;
@@ -54,7 +54,7 @@ namespace LinkupSharp
         {
             IsConnected = false;
             sessionModule = new SessionModule();
-            SessionContext = null;
+            Session = null;
             modules = new List<IClientModule>();
         }
 
@@ -62,6 +62,7 @@ namespace LinkupSharp
 
         private SessionModule sessionModule;
         private List<IClientModule> modules;
+
         public ReadOnlyCollection<IClientModule> Modules
         {
             get { return modules.AsReadOnly(); }
@@ -111,40 +112,63 @@ namespace LinkupSharp
 
         #region Authentication
 
-        public void Authenticate(string username, string domain)
+        public void SignIn(string username, string domain)
         {
-            Authenticate(new Credentials(new Id(username, domain)));
+            SignIn(new Credentials(new Id(username, domain)));
         }
 
-        public void Authenticate(string id)
+        public void SignIn(string id)
         {
-            Authenticate(new Credentials(id));
+            SignIn(new Credentials(id));
         }
 
-        public void Authenticate(Id id)
+        public void SignIn(Id id)
         {
-            Authenticate(new Credentials(id));
+            SignIn(new Credentials(id));
         }
 
-        public void Authenticate(Credentials credentials)
+        public void SignIn(Credentials credentials)
         {
             serverSide = false;
-            Send(credentials);
+            Send(new SignIn(credentials));
         }
 
-        internal void RequireCredentials()
+        public void SignOut(Session session)
+        {
+            Send(new SignOut(session));
+        }
+
+        public void RestoreSession(Session session)
+        {
+            Send(new RestoreSession(session));
+        }
+
+        internal void SendConnected()
         {
             IsConnected = true;
             Send(new Connected());
         }
 
-        internal bool Authenticate(SessionContext sessionContext)
+        internal bool Authenticate(Session session)
         {
-            if (sessionContext != null)
+            if (session == null) return false;
+            serverSide = true;
+            Session = session;
+            Send(new SignedIn(session));
+            return true;
+        }
+
+        internal bool CloseSession(Session session)
+        {
+            if (session.Id == Id)
             {
-                serverSide = true;
-                SessionContext = sessionContext;
-                Send(new Authenticated(sessionContext));
+                if (session.Token == Session.Token)
+                {
+                    Session = null;
+                    Send(new SignedOut(session, true));
+                }
+                else
+                    Send(new SignedOut(session, false));
                 return true;
             }
             return false;
@@ -166,8 +190,8 @@ namespace LinkupSharp
         {
             if (Channel != null)
             {
-                if ((!serverSide) && (SessionContext != null))
-                    packet.Sender = SessionContext.Id;
+                if ((!serverSide) && (Session != null))
+                    packet.Sender = Session.Id;
                 Channel.Send(packet);
             }
         }
@@ -229,19 +253,15 @@ namespace LinkupSharp
 
         #region Events
 
-        public event EventHandler<PacketEventArgs> PacketReceived;
-        public event EventHandler<CredentialsEventArgs> AuthenticationRequired;
-        public event EventHandler<SessionContextEventArgs> RestoreSessionRequired;
+        internal event EventHandler<CredentialsEventArgs> SignInRequired;
+        internal event EventHandler<SessionEventArgs> SignOutRequired;
+        internal event EventHandler<SessionEventArgs> RestoreSessionRequired;
         public event EventHandler<EventArgs> Connected;
-        public event EventHandler<EventArgs> Authenticated;
+        public event EventHandler<EventArgs> SignedIn;
+        public event EventHandler<EventArgs> SignedOut;
         public event EventHandler<EventArgs> AuthenticationFailed;
         public event EventHandler<DisconnectedEventArgs> Disconnected;
-
-        protected internal virtual void OnPacketReceived(PacketEventArgs e)
-        {
-            if (PacketReceived != null)
-                PacketReceived(this, e);
-        }
+        public event EventHandler<PacketEventArgs> PacketReceived;
 
         protected internal virtual void OnDisconnected(Disconnected disconnected)
         {
@@ -260,29 +280,48 @@ namespace LinkupSharp
                 Connected(this, EventArgs.Empty);
         }
 
-        protected internal virtual void OnAuthenticationRequired(Credentials credentials)
+        protected internal virtual void OnSignInRequired(Credentials credentials)
         {
-            if (AuthenticationRequired != null)
-                AuthenticationRequired(this, new CredentialsEventArgs(credentials));
+            if (SignInRequired != null)
+                SignInRequired(this, new CredentialsEventArgs(credentials));
         }
 
-        protected internal void OnRestoreSessionRequired(SessionContext sessionContext)
+        protected internal virtual void OnSignOutRequired(Session session)
+        {
+            if (SignOutRequired != null)
+                SignOutRequired(this, new SessionEventArgs(session));
+        }
+
+        protected internal void OnRestoreSessionRequired(Session session)
         {
             if (RestoreSessionRequired != null)
-                RestoreSessionRequired(this, new SessionContextEventArgs(sessionContext));
+                RestoreSessionRequired(this, new SessionEventArgs(session));
         }
 
-        protected internal virtual void OnAuthenticated(SessionContext sessionContext)
+        protected internal virtual void OnSignedIn(Session session)
         {
-            SessionContext = sessionContext;
-            if (Authenticated != null)
-                Authenticated(this, EventArgs.Empty);
+            Session = session;
+            if (SignedIn != null)
+                SignedIn(this, EventArgs.Empty);
+        }
+
+        protected internal virtual void OnSignedOut(Session session, bool current)
+        {
+            if (current) Session = null;
+            if (SignedIn != null)
+                SignedIn(this, EventArgs.Empty);
         }
 
         protected internal virtual void OnAuthenticationFailed()
         {
             if (AuthenticationFailed != null)
                 AuthenticationFailed(this, EventArgs.Empty);
+        }
+
+        protected internal virtual void OnPacketReceived(PacketEventArgs e)
+        {
+            if (PacketReceived != null)
+                PacketReceived(this, e);
         }
 
         #endregion Events

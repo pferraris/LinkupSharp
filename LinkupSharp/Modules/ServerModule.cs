@@ -54,7 +54,7 @@ namespace LinkupSharp.Modules
                 if (packet.Is(handler.Item1))
                 {
                     var attributes = handler.Item2.Method.GetCustomAttributes(typeof(AuthenticatedAttribute), true);
-                    if ((!attributes.Any()) || (client.SessionContext != null))
+                    if ((!attributes.Any()) || (client.Session != null))
                     {
                         var roles = attributes.OfType<AuthorizedAttribute>().SelectMany(x => x.Roles).ToArray();
                         if ((!roles.Any()) || (manager.IsAuthorized(client, roles)))

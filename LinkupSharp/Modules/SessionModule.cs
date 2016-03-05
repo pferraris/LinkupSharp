@@ -27,7 +27,6 @@
 */
 #endregion License
 
-using LinkupSharp.Security;
 using LinkupSharp.Security.Authentication;
 
 namespace LinkupSharp.Modules
@@ -36,41 +35,56 @@ namespace LinkupSharp.Modules
     {
         public SessionModule()
         {
-            RegisterHandler<Credentials>(HandleCredentials); // Only Server Side
-            RegisterHandler<SessionContext>(HandleSessionContext); // Only Server Side
-            RegisterHandler<Connected>(HandleConnected); // Only Client Side
-            RegisterHandler<Authenticated>(HandleAuthenticated); // Only Client Side
+            RegisterHandler<SignIn>(HandleSignIn); // Only Server Side
+            RegisterHandler<SignOut>(HandleSignOut); // Only Server Side
+            RegisterHandler<RestoreSession>(HandleRestoreSession); // Only Server Side
+            RegisterHandler<SignedIn>(HandleSignedIn); // Only Client Side
+            RegisterHandler<SignedOut>(HandleSignedOut); // Only Client Side
             RegisterHandler<AuthenticationFailed>(HandleAuthenticationFailed); // Only Client Side
+            RegisterHandler<Connected>(HandleConnected); // Only Client Side
             RegisterHandler<Disconnected>(HandleDisconnected); // Both Server & Client Side
         }
 
-        private bool HandleCredentials(Packet packet, ClientConnection client)
+        private bool HandleSignIn(Packet packet, ClientConnection client)
         {
-            client.OnAuthenticationRequired(packet.GetContent() as Credentials);
+            client.OnSignInRequired(packet.GetContent<SignIn>().Credentials);
             return true;
         }
 
-        private bool HandleSessionContext(Packet packet, ClientConnection client)
+        private bool HandleSignOut(Packet packet, ClientConnection client)
         {
-            client.OnRestoreSessionRequired(packet.GetContent<SessionContext>());
+            client.OnSignOutRequired(packet.GetContent<SignOut>().Session);
             return true;
         }
 
-        private bool HandleConnected(Packet packet, ClientConnection client)
+        private bool HandleRestoreSession(Packet packet, ClientConnection client)
         {
-            client.OnConnected();
+            client.OnRestoreSessionRequired(packet.GetContent<RestoreSession>().Session);
             return true;
         }
 
-        private bool HandleAuthenticated(Packet packet, ClientConnection client)
+        private bool HandleSignedIn(Packet packet, ClientConnection client)
         {
-            client.OnAuthenticated(packet.GetContent<Authenticated>().SessionContext);
+            client.OnSignedIn(packet.GetContent<SignedIn>().Session);
+            return true;
+        }
+
+        private bool HandleSignedOut(Packet packet, ClientConnection client)
+        {
+            var signedOut = packet.GetContent<SignedOut>();
+            client.OnSignedOut(signedOut.Session, signedOut.Current);
             return true;
         }
 
         private bool HandleAuthenticationFailed(Packet packet, ClientConnection client)
         {
             client.OnAuthenticationFailed();
+            return true;
+        }
+
+        private bool HandleConnected(Packet packet, ClientConnection client)
+        {
+            client.OnConnected();
             return true;
         }
 

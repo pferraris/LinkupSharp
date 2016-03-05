@@ -27,22 +27,18 @@
 */
 #endregion License
 
-using LinkupSharp.Security;
 using LinkupSharp.Channels;
 using LinkupSharp.Modules;
+using LinkupSharp.Security;
+using LinkupSharp.Security.Authentication;
+using LinkupSharp.Security.Authorization;
 using LinkupSharp.Serializers;
 using log4net;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
-using System.Configuration;
 using System.Linq;
 using System.Net;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading;
-using System.Threading.Tasks;
-using LinkupSharp.Security.Authentication;
-using LinkupSharp.Security.Authorization;
 
 namespace LinkupSharp
 {
@@ -50,58 +46,28 @@ namespace LinkupSharp
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(ConnectionManager));
 
-        public TimeSpan AuthenticationTimeOut { get; set; }
-        private bool ckeckingAuthenticationTimeOut;
-        private Task checkAuthentication;
-
-        public TimeSpan InactivityTimeOut { get; set; }
-        private bool ckeckingInactivityTimeOut;
-        private Task checkInactivity;
-
-        private AnonymousConnections anonymous;
-        private InactiveConnections inactives;
-        private ClientConnections clients;
         private ISessionRepository sessions;
+        private List<ClientConnection> clients;
+        private List<IChannelListener> listeners;
+        private List<IAuthenticator> authenticators;
+        private List<IAuthorizer> authorizers;
+        private List<IServerModule> modules;
 
-        public ReadOnlyDictionary<string, ClientConnection> Clients
-        {
-            get { return new ReadOnlyDictionary<string, ClientConnection>(clients); }
-        }
+        public ISessionRepository Sessions { get { return sessions; } }
+        public IEnumerable<ClientConnection> Clients { get { lock (clients) return clients.Where(x => x.IsAuthenticated).ToArray(); } }
+        public IEnumerable<IChannelListener> Listeners { get { return listeners.ToArray(); } }
+        public IEnumerable<IAuthenticator> Authenticators { get { return authenticators.ToArray(); } }
+        public IEnumerable<IAuthorizer> Authorizers { get { return authorizers.ToArray(); } }
+        public IEnumerable<IServerModule> Modules { get { return modules.ToArray(); } }
 
         public ConnectionManager()
         {
+            sessions = new MemorySessionRepository();
+            clients = new List<ClientConnection>();
             listeners = new List<IChannelListener>();
             authenticators = new List<IAuthenticator>();
             authorizers = new List<IAuthorizer>();
             modules = new List<IServerModule>();
-
-            anonymous = new AnonymousConnections();
-            inactives = new InactiveConnections();
-            clients = new ClientConnections();
-
-            sessions = new MemorySessionRepository();
-
-            string authenticationTimeOut = ConfigurationManager.AppSettings.Get("AuthenticationTimeOut");
-            if (String.IsNullOrEmpty(authenticationTimeOut))
-                AuthenticationTimeOut = TimeSpan.Zero;
-            else
-                AuthenticationTimeOut = TimeSpan.Parse(authenticationTimeOut);
-            if (AuthenticationTimeOut.TotalMilliseconds > 0)
-            {
-                ckeckingAuthenticationTimeOut = true;
-                checkAuthentication = Task.Factory.StartNew(CheckAuthentication);
-            }
-
-            string inactivityTimeOut = ConfigurationManager.AppSettings.Get("InactivityTimeOut");
-            if (String.IsNullOrEmpty(inactivityTimeOut))
-                InactivityTimeOut = TimeSpan.FromMinutes(1);
-            else
-                InactivityTimeOut = TimeSpan.Parse(inactivityTimeOut);
-            if (InactivityTimeOut.TotalMilliseconds > 0)
-            {
-                ckeckingInactivityTimeOut = true;
-                checkInactivity = Task.Factory.StartNew(CheckInactivity);
-            }
         }
 
         public void Dispose()
@@ -109,31 +75,12 @@ namespace LinkupSharp
             ClearListeners();
             ClearAuthenticators();
             ClearModules();
-            if (checkAuthentication != null)
-            {
-                ckeckingAuthenticationTimeOut = false;
-                checkAuthentication.Wait();
-                checkAuthentication.Dispose();
-            }
-            foreach (var item in anonymous.Keys.ToArray())
-                item.Disconnect();
-            if (checkInactivity != null)
-            {
-                ckeckingInactivityTimeOut = false;
-                checkInactivity.Wait();
-                checkInactivity.Dispose();
-            }
-            foreach (var client in clients.Values.ToArray())
+            foreach (var client in clients.ToArray())
                 client.Disconnect();
         }
 
         #region Listeners
 
-        private List<IChannelListener> listeners;
-        public IEnumerable<IChannelListener> Listeners
-        {
-            get { return listeners.ToArray(); }
-        }
 
         public void AddListener(IChannelListener listener)
         {
@@ -207,12 +154,6 @@ namespace LinkupSharp
 
         #region Security
 
-        private List<IAuthenticator> authenticators;
-        public IEnumerable<IAuthenticator> Authenticators
-        {
-            get { return authenticators.ToArray(); }
-        }
-
         public void AddAuthenticator(IAuthenticator authenticator)
         {
             if (authenticator == null) throw new ArgumentNullException("Authenticator cannot be null.");
@@ -239,12 +180,6 @@ namespace LinkupSharp
                 if (client.Authenticate(authenticator.Authenticate(credentials)))
                     return true;
             return false;
-        }
-
-        private List<IAuthorizer> authorizers;
-        public IEnumerable<IAuthorizer> Authorizers
-        {
-            get { return authorizers.ToArray(); }
         }
 
         public void AddAuthorizer(IAuthorizer authorizer)
@@ -280,12 +215,6 @@ namespace LinkupSharp
 
         #region Modules
 
-        private List<IServerModule> modules;
-        public IEnumerable<IServerModule> Modules
-        {
-            get { return modules.ToArray(); }
-        }
-
         public void AddModule(IServerModule module)
         {
             if (module == null) throw new ArgumentNullException("Module cannot be null.");
@@ -313,147 +242,78 @@ namespace LinkupSharp
 
         #region Clients
 
-        private void CheckAuthentication()
-        {
-            while (ckeckingAuthenticationTimeOut)
-            {
-                try
-                {
-                    lock (anonymous)
-                        while (anonymous.Any(x => (DateTime.Now - x.Value) > AuthenticationTimeOut))
-                        {
-                            var item = anonymous.First(x => (DateTime.Now - x.Value) > AuthenticationTimeOut);
-                            item.Key.Disconnect(Reasons.AuthenticationTimeOut);
-                            anonymous.Remove(item.Key);
-                        }
-                    Thread.Sleep(1000);
-                }
-                catch (Exception ex)
-                {
-                    log.Error("Error checking authentication timeout", ex);
-                }
-            }
-        }
-
-        private void CheckInactivity()
-        {
-            while (ckeckingInactivityTimeOut)
-            {
-                try
-                {
-                    lock (inactives)
-                        while (inactives.Any(x => (DateTime.Now - x.Value) > InactivityTimeOut))
-                        {
-                            var item = inactives.First(x => (DateTime.Now - x.Value) > InactivityTimeOut);
-                            lock (clients)
-                                if (clients.ContainsKey(item.Key.Id))
-                                    clients.Remove(item.Key.Id);
-                            inactives.Remove(item.Key);
-                            sessions.Remove(item.Key.SessionContext);
-                            OnClientDisconnected(item.Key, item.Key.Id);
-                        }
-                    Thread.Sleep(1000);
-                }
-                catch (Exception ex)
-                {
-                    log.Error("Error checking inactivity timeout", ex);
-                }
-            }
-        }
-
         private void listener_ClientConnected(object sender, ClientChannelEventArgs e)
         {
             ClientConnection client = new ClientConnection();
-            client.AuthenticationRequired += client_AuthenticationRequired;
+            client.SignInRequired += client_SignInRequired;
+            client.SignOutRequired += client_SignOutRequired;
             client.RestoreSessionRequired += client_RestoreSessionRequired;
             client.PacketReceived += client_PacketReceived;
             client.Disconnected += client_Disconnected;
             client.Connect(e.ClientChannel);
-            lock (anonymous)
-                anonymous.Add(client, DateTime.Now);
-            client.RequireCredentials();
+            if (!clients.Contains(client))
+                lock (clients)
+                    clients.Add(client);
+            client.SendConnected();
         }
 
-        private void client_AuthenticationRequired(object sender, CredentialsEventArgs e)
+        void client_Disconnected(object sender, DisconnectedEventArgs e)
         {
             ClientConnection client = sender as ClientConnection;
-            ClientConnection oldClient = null;
-            Id currentId = client.Id;
+            client.SignInRequired -= client_SignInRequired;
+            client.SignOutRequired -= client_SignOutRequired;
+            client.RestoreSessionRequired -= client_RestoreSessionRequired;
+            client.PacketReceived -= client_PacketReceived;
+            client.Disconnected -= client_Disconnected;
+            if (clients.Contains(client))
+                lock (clients)
+                    clients.Remove(client);
+            if (client.IsAuthenticated)
+            {
+                client.Session.LastConnection = DateTime.Now;
+                OnClientDisconnected(client, client.Id);
+            }
+        }
+
+        private void client_SignInRequired(object sender, CredentialsEventArgs e)
+        {
+            ClientConnection client = sender as ClientConnection;
+            if (client.IsAuthenticated) client.CloseSession(client.Session);
             if (Authenticate(client, e.Credentials))
             {
-                sessions.Add(client.SessionContext);
-                lock (clients)
-                {
-                    // Si se esta abriendo una nueva sesión para un usuario conectado, pero con otra conexión. Debe desconectar la existente.
-                    if ((clients.ContainsKey(client.Id)) && (clients[client.Id] != client))
-                    {
-                        oldClient = clients[client.Id];
-                        sessions.Remove(oldClient.SessionContext);
-                        lock (inactives)
-                            if (inactives.ContainsKey(oldClient))
-                                inactives.Remove(oldClient);
-                            else
-                                oldClient.Disconnect(Reasons.AnotherSessionOpened);
-                        clients.Remove(client.Id);
-                    }
-                    // Si se trata de un cambio de usuario, debe quitar el Id viejo de la lista de clientes.
-                    if ((currentId != null) && (!currentId.Equals(client.Id)))
-                        if (clients.ContainsKey(currentId))
-                        {
-                            sessions.Remove(clients[currentId].SessionContext);
-                            lock (clients)
-                                clients.Remove(currentId);
-                            OnClientDisconnected(client, currentId);
-                        }
-                    // En caso de no estar el Id en la lista de clientes lo agrega.
-                    if (!clients.ContainsKey(client.Id))
-                    {
-                        lock (clients)
-                            clients.Add(client.Id, client);
-                        if (oldClient == null)
-                            OnClientConnected(client, client.Id);
-                        else
-                            OnClientReconnected(client, client.Id);
-                    }
-                }
-                // En caso de estar el cliente en la lista de pendientes, lo quita.
-                if (anonymous.ContainsKey(client))
-                    lock (anonymous)
-                        anonymous.Remove(client);
+                sessions.Add(client.Session);
+                OnClientConnected(client, client.Id);
                 return;
             }
             client.Send(new AuthenticationFailed(e.Credentials.Id));
         }
 
-        void client_RestoreSessionRequired(object sender, SessionContextEventArgs e)
+        private void client_SignOutRequired(object sender, SessionEventArgs e)
         {
             ClientConnection client = sender as ClientConnection;
-            SessionContext session = sessions.Get(e.SessionContext.Id);
-            if (session.Token == e.SessionContext.Token)
+            if (client.CloseSession(e.Session))
             {
-                ClientConnection oldClient = null;
-                if ((clients.ContainsKey(session.Id)) && (clients[session.Id] != client))
-                {
-                    oldClient = clients[session.Id];
-                    lock (inactives)
-                        if (inactives.ContainsKey(oldClient))
-                            inactives.Remove(oldClient);
-                        else
-                            oldClient.Disconnect(Reasons.AnotherSessionOpened);
-                    lock (clients)
-                    {
-                        clients.Remove(session.Id);
-                        clients.Add(session.Id, client);
-                        client.Authenticate(session);
-                        OnClientReconnected(client, client.Id);
-                    }
-                    if (anonymous.ContainsKey(client))
-                        lock (anonymous)
-                            anonymous.Remove(client);
-                    return;
-                }
+                if (sessions.Contains(e.Session.Token))
+                    sessions.Remove(e.Session);
+                OnClientDisconnected(client, e.Session.Id);
             }
-            client.Send(new AuthenticationFailed(e.SessionContext.Id));
+        }
+
+        void client_RestoreSessionRequired(object sender, SessionEventArgs e)
+        {
+            ClientConnection client = sender as ClientConnection;
+            if (sessions.Contains(e.Session.Token))
+            {
+                Session session = sessions.Get(e.Session.Token);
+                if (session.Id == e.Session.Id)
+                    if (client.Authenticate(session))
+                    {
+                        session.LastConnection = null;
+                        OnClientConnected(client, client.Id);
+                        return;
+                    }
+            }
+            client.Send(new AuthenticationFailed(e.Session.Id));
         }
 
         private void client_PacketReceived(object sender, PacketEventArgs e)
@@ -464,37 +324,15 @@ namespace LinkupSharp
 
             if (e.Packet.Recipient == null)
                 Broadcast(e.Packet);
-            else if (clients.ContainsKey(e.Packet.Recipient))
-                clients[e.Packet.Recipient].Send(e.Packet);
-        }
-
-        void client_Disconnected(object sender, DisconnectedEventArgs e)
-        {
-            ClientConnection client = sender as ClientConnection;
-            client.AuthenticationRequired -= client_AuthenticationRequired;
-            client.PacketReceived -= client_PacketReceived;
-            client.Disconnected -= client_Disconnected;
-            if (e.Disconnected.Reason != Reasons.AnotherSessionOpened)
-            {
-                if (anonymous.ContainsKey(client))
-                {
-                    lock (anonymous)
-                        anonymous.Remove(client);
-                }
-                else if ((client.Id != null) && (clients.ContainsKey(client.Id)) && (!inactives.ContainsKey(client)))
-                {
-                    lock (inactives)
-                        inactives.Add(client, DateTime.Now);
-                    OnClientInactive(client, client.Id);
-                }
-            }
+            else
+                foreach (var client in Clients.Where(x => x.Id == e.Packet.Recipient))
+                    client.Send(e.Packet);
         }
 
         private void Broadcast(Packet packet)
         {
-            foreach (var client in clients.Values)
-                if (!client.Id.Equals(packet.Sender))
-                    client.Send(packet);
+            foreach (var client in Clients)
+                client.Send(packet);
         }
 
         #endregion Clients
@@ -502,26 +340,12 @@ namespace LinkupSharp
         #region Events
 
         public event EventHandler<ClientConnectionEventArgs> ClientConnected;
-        public event EventHandler<ClientConnectionEventArgs> ClientInactive;
-        public event EventHandler<ClientConnectionEventArgs> ClientReconnected;
         public event EventHandler<ClientConnectionEventArgs> ClientDisconnected;
 
         protected virtual void OnClientConnected(ClientConnection client, Id id)
         {
             if (ClientConnected != null)
                 ClientConnected(this, new ClientConnectionEventArgs(client, id));
-        }
-
-        protected virtual void OnClientInactive(ClientConnection client, Id id)
-        {
-            if (ClientInactive != null)
-                ClientInactive(this, new ClientConnectionEventArgs(client, id));
-        }
-
-        protected virtual void OnClientReconnected(ClientConnection client, Id id)
-        {
-            if (ClientReconnected != null)
-                ClientReconnected(this, new ClientConnectionEventArgs(client, id));
         }
 
         protected virtual void OnClientDisconnected(ClientConnection client, Id id)
@@ -531,55 +355,6 @@ namespace LinkupSharp
         }
 
         #endregion Events
-
-        #region Dictionary Classes
-
-        private class AnonymousConnections : Dictionary<ClientConnection, DateTime>
-        {
-            public new void Add(ClientConnection key, DateTime value)
-            {
-                base.Add(key, value);
-                log.InfoFormat("Anonymous: {0} ++", Count);
-            }
-
-            public new void Remove(ClientConnection key)
-            {
-                base.Remove(key);
-                log.InfoFormat("Anonymous: {0} --", Count);
-            }
-        }
-
-        private class InactiveConnections : Dictionary<ClientConnection, DateTime>
-        {
-            public new void Add(ClientConnection key, DateTime value)
-            {
-                base.Add(key, value);
-                log.InfoFormat("Inactive: {0} ++", Count);
-            }
-
-            public new void Remove(ClientConnection key)
-            {
-                base.Remove(key);
-                log.InfoFormat("Inactive: {0} --", Count);
-            }
-        }
-
-        private class ClientConnections : Dictionary<string, ClientConnection>
-        {
-            public new void Add(string key, ClientConnection value)
-            {
-                base.Add(key, value);
-                log.InfoFormat("Authenticated: {0} ++", Count);
-            }
-
-            public new void Remove(string key)
-            {
-                base.Remove(key);
-                log.InfoFormat("Authenticated: {0} --", Count);
-            }
-        }
-
-        #endregion Dictionary Classes
 
     }
 }

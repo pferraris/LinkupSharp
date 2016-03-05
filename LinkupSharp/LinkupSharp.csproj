@@ -42,22 +42,25 @@
       <HintPath>..\packages\Patterns.Logging.1.0.0.2\lib\portable-net45+sl4+wp71+win8+wpa81\Patterns.Logging.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="SocketHttpListener, Version=1.0.5900.37035, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\SocketHttpListener.1.0.0.27\lib\net45\SocketHttpListener.dll</HintPath>
+    <Reference Include="SocketHttpListener, Version=1.0.5906.23695, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\SocketHttpListener.1.0.0.28\lib\net45\SocketHttpListener.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
-    <Reference Include="System.Configuration" />
     <Reference Include="System.Core" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Security\Authentication\Authenticated.cs" />
+    <Compile Include="Security\Authentication\SignedOut.cs" />
+    <Compile Include="Security\Authentication\SignedIn.cs" />
     <Compile Include="Security\Authentication\AuthenticationFailed.cs" />
     <Compile Include="Security\Authentication\AnonymousAuthenticator.cs" />
+    <Compile Include="Security\Authentication\RestoreSession.cs" />
+    <Compile Include="Security\Authentication\SignIn.cs" />
+    <Compile Include="Security\Authentication\SignOut.cs" />
     <Compile Include="Security\Authorization\IAuthorizer.cs" />
     <Compile Include="Security\Credentials.cs" />
     <Compile Include="Security\ISessionRepository.cs" />
-    <Compile Include="Security\SessionContextEventArgs.cs" />
+    <Compile Include="Security\SessionEventArgs.cs" />
     <Compile Include="Security\Authentication\IAuthenticator.cs" />
     <Compile Include="Security\MemorySessionRepository.cs" />
     <Compile Include="Channels\IChannelListener.cs" />
@@ -73,7 +76,7 @@
     <Compile Include="DisconnectedEventArgs.cs" />
     <Compile Include="Connected.cs" />
     <Compile Include="ConnectionManager.cs" />
-    <Compile Include="Security\SessionContext.cs" />
+    <Compile Include="Security\Session.cs" />
     <Compile Include="Security\CredentialsEventArgs.cs" />
     <Compile Include="Security\Authorization\AuthorizedAttribute.cs" />
     <Compile Include="Security\Authentication\AuthenticatedAttribute.cs" />
@@ -101,7 +104,6 @@
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>
-    <None Include="app.config" />
     <None Include="packages.config" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />

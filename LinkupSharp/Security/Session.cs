@@ -31,13 +31,21 @@ using System;
 
 namespace LinkupSharp.Security
 {
-    public class SessionContextEventArgs : EventArgs
+    public class Session
     {
-        public SessionContext SessionContext { get; private set; }
+        public Id Id { get; private set; }
+        public string Token { get; private set; }
+        public DateTime? LastConnection { get; set; }
 
-        public SessionContextEventArgs(SessionContext sessionContext)
+        public Session(Id id, string token = null)
         {
-            SessionContext = sessionContext;
+            Id = id;
+            Token = token ?? Guid.NewGuid().ToString();
+        }
+
+        public override string ToString()
+        {
+            return Token;
         }
     }
 }

@@ -27,24 +27,20 @@
 */
 #endregion License
 
-using System;
-
-namespace LinkupSharp.Security
+namespace LinkupSharp.Security.Authentication
 {
-    public class SessionContext
+    public class SignedIn
     {
-        public Id Id { get; private set; }
-        public string Token { get; private set; }
+        public Session Session { get; private set; }
 
-        public SessionContext(Id id, string token = null)
+        public SignedIn(Session session)
         {
-            Id = id;
-            Token = token ?? Guid.NewGuid().ToString();
+            Session = session;
         }
 
         public override string ToString()
         {
-            return Id;
+            return Session.ToString();
         }
     }
 }

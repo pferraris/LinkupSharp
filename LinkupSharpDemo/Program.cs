@@ -28,8 +28,27 @@ namespace LinkupSharpDemo
             server.AddListener<ProtoPacketSerializer>("wss://localhost:5655/", certificatePfx);
 
             var client1 = new TestClient();
-            client1.Connected += (sender, e) => client1.Authenticate("client1@test");
-            client1.Authenticated += client1_Authenticated;
+            client1.Connected += (sender, e) => client1.SignIn("client1@test");
+            client1.SignedIn += client1_SignedIn;
+            client1.ContactsReceived += (senderInt, contacts) =>
+            {
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("{0} => Contacts: {1}", client1.Id, string.Join<Id>("; ", contacts));
+                Console.ResetColor();
+            };
+
+            int messagesCount = 0;
+            client1.MessageReceived += (senderInt, message) =>
+            {
+                Console.ForegroundColor = ConsoleColor.Cyan;
+                Console.WriteLine("{0} => {1}", client1.Id, message.Text);
+                Console.ResetColor();
+                if (++messagesCount == 1)
+                    client1.SendMessage("Hello Client2 ♥", "client2@test");
+                else
+                    client1.Disconnect();
+            };
+
             Connect(client1, certificateCer);
             Console.ReadLine();
         }
@@ -38,8 +57,8 @@ namespace LinkupSharpDemo
         {
             //client.Connect("ssl://localhost:5650/", certificate);
             //client.Connect("http://localhost:5651/", certificate);
-            //client.Connect("wss://localhost:5652/", certificate);
-            client.Connect<ProtoPacketSerializer>("ssl://localhost:5653/", certificate);
+            client.Connect("wss://localhost:5652/", certificate);
+            //client.Connect<ProtoPacketSerializer>("ssl://localhost:5653/", certificate);
             //client.Connect<ProtoPacketSerializer>("http://localhost:5654/", certificate);
             //client.Connect<ProtoPacketSerializer>("wss://localhost:5655/", certificate);
         }
@@ -62,19 +81,19 @@ namespace LinkupSharpDemo
             return Encoding.UTF8.GetString(LoadResource(resourceName));
         }
 
-        private static void client1_Authenticated(object sender, EventArgs e)
+        private static void client1_SignedIn(object sender, EventArgs e)
         {
             var client2 = new TestClient();
 
             client2.Connected += (senderInt, eInt) =>
             {
-                if (client2.SessionContext == null)
-                    client2.Authenticate("client2@test");
+                if (client2.Session == null)
+                    client2.SignIn("client2@test");
                 else
-                    client2.Send((senderInt as TestClient).SessionContext);
+                    client2.RestoreSession((senderInt as TestClient).Session);
             };
 
-            client2.Authenticated += (senderInt, eInt) =>
+            client2.SignedIn += (senderInt, eInt) =>
             {
                 client2.SendMessage("Hi client1!!", "client1@test");
             };
@@ -87,6 +106,21 @@ namespace LinkupSharpDemo
                     reconnected = true;
                     Connect(client2, certificateCer);
                 }
+            };
+
+            client2.ContactsReceived += (senderInt, contacts) =>
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("{0} => Contacts: {1}", client2.Id, string.Join<Id>("; ", contacts));
+                Console.ResetColor();
+            };
+
+            client2.MessageReceived += (senderInt, message) =>
+            {
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("{0} => {1}", client2.Id, message.Text);
+                Console.ResetColor();
+                client2.Disconnect();
             };
 
             Connect(client2, certificateCer);
@@ -113,6 +147,21 @@ namespace LinkupSharpDemo
         {
             Send(new Packet(new Message(text)) { Recipient = recipient });
         }
+
+        public event EventHandler<Id[]> ContactsReceived;
+        public event EventHandler<Message> MessageReceived;
+
+        public void OnMessageReceived(Message message)
+        {
+            if (MessageReceived != null)
+                MessageReceived(this, message);
+        }
+
+        public void OnContactsReceived(Id[] contacts)
+        {
+            if (ContactsReceived != null)
+                ContactsReceived(this, contacts);
+        }
     }
 
     public class TestServerModule : ServerModule
@@ -125,11 +174,9 @@ namespace LinkupSharpDemo
         [Authenticated]
         private bool HandleMessage(Packet packet, ClientConnection client, ConnectionManager manager)
         {
-            if ((packet.Recipient != null) && (manager.Clients.ContainsKey(packet.Recipient)))
-            {
-                manager.Clients[packet.Recipient].Send(packet);
-                client.Send(packet);
-            }
+            if ((packet.Recipient != null) && (manager.Clients.Any(x => x.Id == packet.Recipient)))
+                foreach (var recipient in manager.Clients.Where(x => x.Id == packet.Recipient))
+                    recipient.Send(packet);
             return true;
         }
 
@@ -142,7 +189,7 @@ namespace LinkupSharpDemo
 
         private void SendClients(object sender, ClientConnectionEventArgs e)
         {
-            var clients = (sender as ConnectionManager).Clients.Values.ToArray();
+            var clients = (sender as ConnectionManager).Clients;
             foreach (var client in clients)
                 client.Send(new Packet(clients.Select(x => x.Id).ToArray()) { Recipient = client.Id });
         }
@@ -158,14 +205,13 @@ namespace LinkupSharpDemo
 
         private bool HandleContacts(Packet packet, ClientConnection client)
         {
-            Console.WriteLine("{0} => Contacts: {1}", client.Id, String.Join<Id>("; ", packet.GetContent<Id[]>()));
+            (client as TestClient).OnContactsReceived(packet.GetContent<Id[]>());
             return true;
         }
 
         private bool HandleMessage(Packet packet, ClientConnection client)
         {
-            Console.WriteLine("{0} => {1} say: {2}", client.Id, packet.Sender, packet.GetContent<Message>().Text);
-            client.Disconnect();
+            (client as TestClient).OnMessageReceived(packet.GetContent<Message>());
             return true;
         }
     }

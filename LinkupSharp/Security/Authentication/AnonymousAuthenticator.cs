@@ -31,10 +31,10 @@ namespace LinkupSharp.Security.Authentication
 {
     public class AnonymousAuthenticator : IAuthenticator
     {
-        public SessionContext Authenticate(Credentials credentials)
+        public Session Authenticate(Credentials credentials)
         {
             if (credentials == null) return null;
-            return new SessionContext(credentials.Id);
+            return new Session(credentials.Id);
         }
     }
 }

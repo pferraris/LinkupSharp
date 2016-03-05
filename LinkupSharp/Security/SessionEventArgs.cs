@@ -27,48 +27,17 @@
 */
 #endregion License
 
-using System.Collections.Generic;
-using System.Linq;
+using System;
 
 namespace LinkupSharp.Security
 {
-    public class MemorySessionRepository : ISessionRepository
+    public class SessionEventArgs : EventArgs
     {
-        private Dictionary<string, Session> sessions;
+        public Session Session { get; private set; }
 
-        public MemorySessionRepository()
+        public SessionEventArgs(Session session)
         {
-            sessions = new Dictionary<string, Session>();
-        }
-
-        public bool Contains(string token)
-        {
-            return sessions.ContainsKey(token);
-        }
-
-        public Session Get(string token)
-        {
-            if (Contains(token))
-                return sessions[token];
-            return null;
-        }
-
-        public IEnumerable<Session> Get(Id id)
-        {
-            return sessions.Values.Where(x => x.Id == id).ToArray();
-        }
-
-        public void Add(Session session)
-        {
-            lock (sessions)
-                sessions[session.Token] = session;
-        }
-
-        public void Remove(Session session)
-        {
-            lock (sessions)
-                if (sessions.ContainsKey(session.Token))
-                    sessions.Remove(session.Token);
+            Session = session;
         }
     }
 }

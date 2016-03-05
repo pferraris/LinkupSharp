@@ -71,6 +71,15 @@ namespace LinkupSharp
             return String.Format("{0}@{1}", Username, Domain);
         }
 
+        public static bool operator ==(Id a, Id b)
+        {
+            return a.Equals(b);
+        }
+
+        public static bool operator !=(Id a, Id b)
+        {
+            return !a.Equals(b);
+        }
         public static implicit operator Id(string id)
         {
             if (id == null) return null;

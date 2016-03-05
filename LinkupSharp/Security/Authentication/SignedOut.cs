@@ -29,18 +29,20 @@
 
 namespace LinkupSharp.Security.Authentication
 {
-    public class Authenticated
+    public class SignedOut
     {
-        public SessionContext SessionContext { get; private set; }
+        public Session Session { get; private set; }
+        public bool Current { get; private set; }
 
-        public Authenticated(SessionContext sessionContext)
+        public SignedOut(Session session, bool current)
         {
-            SessionContext = sessionContext;
+            Session = session;
+            Current = current;
         }
 
         public override string ToString()
         {
-            return SessionContext.ToString();
+            return Session.ToString();
         }
     }
 }
