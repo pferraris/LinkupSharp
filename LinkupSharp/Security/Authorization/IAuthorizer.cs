@@ -2,6 +2,6 @@
 {
     public interface IAuthorizer
     {
-        bool IsAuthorized(Id id, params object[] roles);
+        bool IsAuthorized(Session session, params object[] roles);
     }
 }

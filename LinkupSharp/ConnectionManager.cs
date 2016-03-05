@@ -206,7 +206,7 @@ namespace LinkupSharp
         {
             if (!authorizers.Any()) return true;
             foreach (var authorizer in Authorizers)
-                if (authorizer.IsAuthorized(client.Id, roles))
+                if (authorizer.IsAuthorized(client.Session, roles))
                     return true;
             return false;
         }
