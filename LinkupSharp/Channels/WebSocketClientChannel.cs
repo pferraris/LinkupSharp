@@ -98,6 +98,8 @@ namespace LinkupSharp.Channels
                 }
                 catch { }
             }
+            socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Ok", CancellationToken.None).Wait();
+            Task.Factory.StartNew(OnClosed);
         }
 
         public async Task Send(Packet packet)
@@ -123,20 +125,13 @@ namespace LinkupSharp.Channels
             {
                 cancel.Cancel();
                 if (readingTask != null)
-                {
                     await readingTask;
-                    readingTask.Dispose();
-                }
-                if (socket != null)
-                    socket.Dispose();
-                cancel.Dispose();
-                OnClosed();
             }
         }
 
         public void Dispose()
         {
-            Close();
+            var task = Close();
         }
 
         #endregion Methods
@@ -154,6 +149,13 @@ namespace LinkupSharp.Channels
 
         private void OnClosed()
         {
+            if (readingTask != null)
+            {
+                readingTask.Wait();
+                readingTask.Dispose();
+            }
+            if (socket != null) socket.Dispose();
+            if (cancel != null) cancel.Dispose();
             if (Closed != null)
                 Closed(this, EventArgs.Empty);
         }
