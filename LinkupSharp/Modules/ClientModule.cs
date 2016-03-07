@@ -27,8 +27,10 @@
 */
 #endregion License
 
+using LinkupSharp.Security.Authentication;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace LinkupSharp.Modules
 {
@@ -43,8 +45,12 @@ namespace LinkupSharp.Modules
         {
             foreach (var handler in PacketHandlers)
                 if (packet.Is(handler.Item1))
-                    if (handler.Item2(packet, client))
-                        return true;
+                {
+                    var attributes = handler.Item2.Method.GetCustomAttributes(typeof(AuthenticatedAttribute), true);
+                    if ((!attributes.Any()) || (client.Session != null))
+                        if (handler.Item2(packet, client))
+                            return true;
+                }
             return false;
         }
 
