@@ -35,7 +35,6 @@ namespace LinkupSharp.Security
     {
         public Id Id { get; private set; }
         public string Token { get; private set; }
-        public DateTime? LastConnection { get; set; }
 
         public Session(Id id, string token = null)
         {

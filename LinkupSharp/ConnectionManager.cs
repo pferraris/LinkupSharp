@@ -269,10 +269,7 @@ namespace LinkupSharp
                 lock (clients)
                     clients.Remove(client);
             if (client.IsAuthenticated)
-            {
-                client.Session.LastConnection = DateTime.Now;
                 OnClientDisconnected(client, client.Id);
-            }
         }
 
         private void client_SignInRequired(object sender, SignInEventArgs e)
@@ -308,7 +305,6 @@ namespace LinkupSharp
                 if (session.Id == e.Session.Id)
                     if (client.Authenticate(session))
                     {
-                        session.LastConnection = null;
                         OnClientConnected(client, client.Id);
                         return;
                     }
