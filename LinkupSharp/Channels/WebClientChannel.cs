@@ -64,7 +64,7 @@ namespace LinkupSharp.Channels
             this.serverSide = true;
             serializer = new T();
             inactivityTime = 5000;
-            inactivityTimer = new Timer(state => Close(), null, inactivityTime, Timeout.Infinite);
+            inactivityTimer = new Timer(state => Close().Wait(), null, inactivityTime, Timeout.Infinite);
             pending = new Queue<Packet>();
         }
 
@@ -99,6 +99,7 @@ namespace LinkupSharp.Channels
 
         private void Read()
         {
+            Task closing;
             while (active)
             {
                 try
@@ -120,7 +121,7 @@ namespace LinkupSharp.Channels
                             } while (count > 0);
                         }
                         else if (webResponse.StatusCode != HttpStatusCode.NoContent)
-                            Close();
+                            closing = Close();
                         webResponse.Close();
                     }
                 }
@@ -177,7 +178,6 @@ namespace LinkupSharp.Channels
                     inactivityTimer.Dispose();
                 }
                 catch { }
-                OnClosed();
             }
             else if (active)
             {
@@ -188,13 +188,13 @@ namespace LinkupSharp.Channels
                     readingTask.Dispose();
                 }
                 catch { }
-                OnClosed();
             }
+            await Task.Factory.StartNew(OnClosed);
         }
 
         public void Dispose()
         {
-            Close();
+            Close().Wait();
         }
 
         #endregion Methods

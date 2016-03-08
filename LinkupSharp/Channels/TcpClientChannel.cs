@@ -151,7 +151,7 @@ namespace LinkupSharp.Channels
                 catch (Exception ex)
                 {
                     log.Error("Sending error", ex);
-                    Close();
+                    await Close();
                 }
         }
 
@@ -179,7 +179,7 @@ namespace LinkupSharp.Channels
 
         public void Dispose()
         {
-            Close();
+            Close().Wait();
         }
 
         #endregion Methods

@@ -52,7 +52,7 @@ namespace LinkupSharpDemo
                     Console.ResetColor();
                 }
                 if (++messagesCount == 1)
-                    client1.SendMessage("Hello Client2 ♥", "client2@test");
+                    client1.SendMessage("Hello Client2 ♪", "client2@test");
                 else
                     client1.Disconnect();
             };

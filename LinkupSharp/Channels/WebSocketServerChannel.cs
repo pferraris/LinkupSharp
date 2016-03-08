@@ -118,12 +118,12 @@ namespace LinkupSharp.Channels
         public async Task Close()
         {
             if ((socket.ReadyState == WebSocketState.Open) && (socket.ReadyState == WebSocketState.Connecting))
-                socket.Close();
+                await Task.Factory.StartNew(socket.Close);
         }
 
         public void Dispose()
         {
-            Close();
+            Close().Wait();
         }
 
         #endregion Methods

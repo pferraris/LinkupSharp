@@ -81,7 +81,7 @@ namespace LinkupSharp.Channels
                 try
                 {
                     var context = listener.GetContext();
-                    Task.Run(() => ProcessRequest(context));
+                    Task.Factory.StartNew(() => ProcessRequest(context));
                 }
                 catch (Exception ex)
                 {
