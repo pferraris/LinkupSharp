@@ -13,6 +13,8 @@ namespace LinkupSharpDemo
 {
     class Program
     {
+        private static object syncLock = new object();
+
         static void Main(string[] args)
         {
             XmlConfigurator.Configure();
@@ -32,17 +34,23 @@ namespace LinkupSharpDemo
             client1.SignedIn += client1_SignedIn;
             client1.ContactsReceived += (senderInt, contacts) =>
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("{0} => Contacts: {1}", client1.Id, string.Join<Id>("; ", contacts));
-                Console.ResetColor();
+                lock (syncLock)
+                {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine("{0} => Contacts: {1}", client1.Id, string.Join<Id>("; ", contacts));
+                    Console.ResetColor();
+                }
             };
 
             int messagesCount = 0;
             client1.MessageReceived += (senderInt, message) =>
             {
-                Console.ForegroundColor = ConsoleColor.Cyan;
-                Console.WriteLine("{0} => {1}", client1.Id, message.Text);
-                Console.ResetColor();
+                lock (syncLock)
+                {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine("{0} => {1}", client1.Id, message.Text);
+                    Console.ResetColor();
+                }
                 if (++messagesCount == 1)
                     client1.SendMessage("Hello Client2 ♥", "client2@test");
                 else
@@ -110,16 +118,22 @@ namespace LinkupSharpDemo
 
             client2.ContactsReceived += (senderInt, contacts) =>
             {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("{0} => Contacts: {1}", client2.Id, string.Join<Id>("; ", contacts));
-                Console.ResetColor();
+                lock (syncLock)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("{0} => Contacts: {1}", client2.Id, string.Join<Id>("; ", contacts));
+                    Console.ResetColor();
+                }
             };
 
             client2.MessageReceived += (senderInt, message) =>
             {
-                Console.ForegroundColor = ConsoleColor.Green;
-                Console.WriteLine("{0} => {1}", client2.Id, message.Text);
-                Console.ResetColor();
+                lock (syncLock)
+                {
+                    Console.ForegroundColor = ConsoleColor.Green;
+                    Console.WriteLine("{0} => {1}", client2.Id, message.Text);
+                    Console.ResetColor();
+                }
                 client2.Disconnect();
             };
 

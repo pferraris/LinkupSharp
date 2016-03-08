@@ -85,7 +85,7 @@ namespace LinkupSharp.Channels
 
         internal void DataReceived(byte[] buffer)
         {
-            Task.Factory.StartNew(() => OnPacketReceived(serializer.Deserialize(buffer)));
+            OnPacketReceived(serializer.Deserialize(buffer));
         }
 
         internal byte[] DataPending()
