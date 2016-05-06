@@ -35,15 +35,15 @@
       <Private>True</Private>
     </Reference>
     <Reference Include="Newtonsoft.Json, Version=8.0.0.0, Culture=neutral, PublicKeyToken=30ad4fe6b2a6aeed, processorArchitecture=MSIL">
-      <HintPath>..\packages\Newtonsoft.Json.8.0.2\lib\net45\Newtonsoft.Json.dll</HintPath>
+      <HintPath>..\packages\Newtonsoft.Json.8.0.3\lib\net45\Newtonsoft.Json.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="Patterns.Logging, Version=1.0.5494.41209, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\Patterns.Logging.1.0.0.2\lib\portable-net45+sl4+wp71+win8+wpa81\Patterns.Logging.dll</HintPath>
+    <Reference Include="Patterns.Logging, Version=1.0.5944.40783, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\Patterns.Logging.1.0.0.3\lib\portable-net45+dnxcore50+sl4+wp71+win8+wpa81\Patterns.Logging.dll</HintPath>
       <Private>True</Private>
     </Reference>
-    <Reference Include="SocketHttpListener, Version=1.0.5906.23695, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\SocketHttpListener.1.0.0.28\lib\net45\SocketHttpListener.dll</HintPath>
+    <Reference Include="SocketHttpListener, Version=1.0.5955.1537, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\SocketHttpListener.1.0.0.30\lib\net45\SocketHttpListener.dll</HintPath>
       <Private>True</Private>
     </Reference>
     <Reference Include="System" />
