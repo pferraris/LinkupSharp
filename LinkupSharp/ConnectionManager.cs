@@ -106,6 +106,7 @@ namespace LinkupSharp
             {
                 case "tcp":
                 case "ssl":
+                    if ("tcp".Equals(uri.Scheme.ToLower())) certificate = null;
                     if (IPAddress.TryParse(uri.Host, out address))
                         AddListener(new TcpChannelListener<T>(uri.Port, address, certificate));
                     else
@@ -125,6 +126,7 @@ namespace LinkupSharp
                     break;
                 case "ws":
                 case "wss":
+                    if ("ws".Equals(uri.Scheme.ToLower())) certificate = null;
                     endpoint = endpoint.Replace("0.0.0.0", "+");
                     endpoint = endpoint.Replace("wss://", "https://");
                     endpoint = endpoint.Replace("ws://", "http://");
