@@ -29,10 +29,11 @@
 
 using LinkupSharp.Serializers;
 using log4net;
+using SocketHttpListener.Net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
@@ -40,54 +41,35 @@ namespace LinkupSharp.Channels
     public class WebChannelListener<T> : IChannelListener where T : IPacketSerializer, new()
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(WebChannelListener<T>));
-        public string Prefix { get; private set; }
 
-        private Dictionary<string, WebClientChannel<T>> connections;
         private HttpListener listener;
-        private bool listening;
-        private Task listenerTask;
+        private X509Certificate2 certificate;
+        private Dictionary<string, WebClientChannel<T>> connections;
+        private string prefix;
 
-        public WebChannelListener(string prefix)
+
+        public WebChannelListener(string prefix, X509Certificate2 certificate = null)
         {
-            Prefix = prefix;
+            this.prefix = prefix;
+            this.certificate = certificate;
         }
 
         #region Methods
 
         public void Start()
         {
+            if (listener != null) Stop();
             connections = new Dictionary<string, WebClientChannel<T>>();
-            listener = new HttpListener();
-            listener.Prefixes.Add(Prefix);
+            listener = new HttpListener(certificate);
+            listener.Prefixes.Add(prefix);
+            listener.OnContext = x => Task.Factory.StartNew(() => ProcessRequest(x));
             listener.Start();
-            listening = true;
-            listenerTask = Task.Factory.StartNew(Listen);
         }
 
         public void Stop()
         {
-            listening = false;
             listener.Stop();
-            listenerTask.Wait();
             listener = null;
-            listenerTask.Dispose();
-            listenerTask = null;
-        }
-
-        private void Listen()
-        {
-            while (listening)
-            {
-                try
-                {
-                    var context = listener.GetContext();
-                    Task.Factory.StartNew(() => ProcessRequest(context));
-                }
-                catch (Exception ex)
-                {
-                    log.Error("Error when client connected", ex);
-                }
-            }
         }
 
         private void ProcessRequest(HttpListenerContext context)
@@ -98,7 +80,7 @@ namespace LinkupSharp.Channels
                 if (!context.Request.Headers.AllKeys.Contains("ClientId")) return;
                 string id = context.Request.Headers["ClientId"];
                 lock (connections)
-                if (!connections.ContainsKey(id))
+                    if (!connections.ContainsKey(id))
                     {
                         var client = new WebClientChannel<T>(id, true);
                         client.Closed += client_Closed;
@@ -107,24 +89,24 @@ namespace LinkupSharp.Channels
                     }
                 if (context.Request.HttpMethod == "POST")
                 {
-                    byte[] buffer = new byte[65536];
+                    List<byte> content = new List<byte>();
                     int count;
                     do
                     {
+                        byte[] buffer = new byte[65536];
                         count = context.Request.InputStream.Read(buffer, 0, buffer.Length);
-                        if (count > 0) connections[id].DataReceived(buffer.Take(count).ToArray());
+                        content.AddRange(buffer.Take(count));
                     } while (count > 0);
+                    connections[id].DataReceived(content.ToArray());
                     context.Response.StatusCode = (int)HttpStatusCode.OK;
                 }
                 else if (context.Request.HttpMethod == "GET")
                 {
                     byte[] buffer = connections[id].DataPending();
-                    if (buffer.Any())
+                    if (buffer.Length > 0)
                     {
                         context.Response.ContentLength64 = buffer.Length;
                         context.Response.OutputStream.Write(buffer, 0, buffer.Length);
-                        context.Response.OutputStream.Flush();
-                        context.Response.OutputStream.Close();
                         context.Response.StatusCode = (int)HttpStatusCode.OK;
                     }
                     else
@@ -157,8 +139,7 @@ namespace LinkupSharp.Channels
         private void OnClientConnected(IClientChannel clientChannel)
         {
             if (clientChannel == null) return;
-            if (ClientConnected != null)
-                ClientConnected(this, new ClientChannelEventArgs(clientChannel));
+            ClientConnected?.Invoke(this, new ClientChannelEventArgs(clientChannel));
         }
 
         #endregion Events

@@ -32,6 +32,6 @@ namespace LinkupSharp.Serializers
     public interface IPacketSerializer
     {
         byte[] Serialize(Packet packet);
-        Packet Deserialize(byte[] bytes);
+        Packet Deserialize(byte[] bytes = null);
     }
 }

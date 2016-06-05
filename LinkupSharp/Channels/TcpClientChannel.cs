@@ -43,37 +43,48 @@ namespace LinkupSharp.Channels
     public class TcpClientChannel<T> : IClientChannel where T : IPacketSerializer, new()
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(TcpClientChannel<T>));
+        private static readonly byte[] token = new byte[] { 0x0007, 0x000C, 0x000B };
+
         private Task readingTask;
         private bool active;
         private TcpClient socket;
         private IPacketSerializer serializer;
         private Stream stream;
         private bool serverSide;
+        private string host;
+        private int port;
         private X509Certificate2 certificate;
 
-        public TcpClientChannel(string host, int port)
-            : this(host, port, null)
+        public TcpClientChannel(string host, int port, X509Certificate2 certificate = null)
         {
+            this.host = host;
+            this.port = port;
+            this.certificate = certificate;
+            serverSide = false;
+            serializer = new TokenizedPacketSerializer<T>(token);
         }
 
-        public TcpClientChannel(string host, int port, X509Certificate2 certificate)
-            : this(certificate)
-        {
-            SetSocket(new TcpClient(host, port));
-        }
-
-        internal TcpClientChannel(X509Certificate2 certificate)
+        internal TcpClientChannel(TcpClient socket, X509Certificate2 certificate)
         {
             this.certificate = certificate;
+            serverSide = true;
+            serializer = new TokenizedPacketSerializer<T>(token);
+            SetSocket(socket);
         }
 
         #region Methods
 
-        internal void SetSocket(TcpClient socket, bool serverSide = false)
+        public async Task Open()
         {
-            this.serverSide = serverSide;
-            byte[] token = new byte[] { 0x0007, 0x000C, 0x000B };
-            serializer = new TokenizedPacketSerializer<T>(token);
+            if (!serverSide)
+                await Task.Factory.StartNew(() =>
+                {
+                    SetSocket(new TcpClient(host, port));
+                });
+        }
+
+        private void SetSocket(TcpClient socket)
+        {
             this.socket = socket;
             stream = GetStream();
             active = true;
@@ -82,17 +93,17 @@ namespace LinkupSharp.Channels
 
         private Stream GetStream()
         {
-            Stream stream = null;
             if (certificate == null)
             {
-                stream = socket.GetStream();
+                return socket.GetStream();
             }
             else
             {
+                SslStream stream = null;
                 if (serverSide)
                 {
                     stream = new SslStream(socket.GetStream(), false);
-                    (stream as SslStream).AuthenticateAsServer(certificate);
+                    stream.AuthenticateAsServer(certificate);
                 }
                 else
                 {
@@ -100,10 +111,10 @@ namespace LinkupSharp.Channels
                     string hostname = socket.Client.RemoteEndPoint.ToString();
                     if (hostname.Contains(":"))
                         hostname = hostname.Substring(0, hostname.IndexOf(':'));
-                    (stream as SslStream).AuthenticateAsClient(hostname);
+                    stream.AuthenticateAsClient(hostname);
                 }
+                return stream;
             }
-            return stream;
         }
 
         private bool CertificateValidation(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
@@ -126,7 +137,7 @@ namespace LinkupSharp.Channels
                         while (packet != null)
                         {
                             OnPacketReceived(packet);
-                            packet = serializer.Deserialize(new byte[0]);
+                            packet = serializer.Deserialize();
                         }
                     }
                     catch (Exception ex)
@@ -191,14 +202,12 @@ namespace LinkupSharp.Channels
 
         private void OnPacketReceived(Packet packet)
         {
-            if (PacketReceived != null)
-                PacketReceived(this, new PacketEventArgs(packet));
+            PacketReceived?.Invoke(this, new PacketEventArgs(packet));
         }
 
         private void OnClosed()
         {
-            if (Closed != null)
-                Closed(this, EventArgs.Empty);
+            Closed?.Invoke(this, EventArgs.Empty);
         }
 
         #endregion Events

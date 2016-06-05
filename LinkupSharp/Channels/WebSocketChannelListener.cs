@@ -41,12 +41,11 @@ namespace LinkupSharp.Channels
         private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketChannelListener<T>));
         private HttpListener listener;
         private X509Certificate2 certificate;
-
-        public string Prefix { get; private set; }
+        private string prefix;
 
         public WebSocketChannelListener(string prefix, X509Certificate2 certificate = null)
         {
-            Prefix = prefix;
+            this.prefix = prefix;
             this.certificate = certificate;
         }
 
@@ -54,10 +53,9 @@ namespace LinkupSharp.Channels
 
         public void Start()
         {
-            if (listener != null)
-                Stop();
+            if (listener != null) Stop();
             listener = new HttpListener(certificate);
-            listener.Prefixes.Add(Prefix);
+            listener.Prefixes.Add(prefix);
             listener.OnContext = x => ProcessRequest(x);
             listener.Start();
         }
@@ -104,8 +102,7 @@ namespace LinkupSharp.Channels
         private void OnClientConnected(IClientChannel clientChannel)
         {
             if (clientChannel == null) return;
-            if (ClientConnected != null)
-                ClientConnected(this, new ClientChannelEventArgs(clientChannel));
+            ClientConnected?.Invoke(this, new ClientChannelEventArgs(clientChannel));
         }
 
         #endregion Events

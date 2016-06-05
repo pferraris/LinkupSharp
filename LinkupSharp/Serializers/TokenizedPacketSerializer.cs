@@ -60,14 +60,13 @@ namespace LinkupSharp.Serializers
         {
             lock (buffer)
             {
-                buffer.AddRange(bytes);
+                if (bytes != null)
+                    buffer.AddRange(bytes);
                 if (ContainsPacket)
                 {
                     try
                     {
-                        byte[] packet = ReadPacket();
-                        if (packet.Length > 0)
-                            return internalSerializer.Deserialize(packet);
+                        return internalSerializer.Deserialize(ReadPacket());
                     }
                     catch (Exception ex)
                     {
@@ -82,8 +81,14 @@ namespace LinkupSharp.Serializers
         {
             get
             {
-                if (buffer.Count == 0) return false;
-                if (token == null) return true;
+                if (token == null)
+                {
+                    if (buffer.Count > 0)
+                        return true;
+                    else
+                        return false;
+                }
+                if (buffer.Count <= token.Length) return false;
                 int start = buffer.Count - token.Length;
                 int pos;
                 while ((pos = buffer.LastIndexOf(token.First(), start)) >= 0)

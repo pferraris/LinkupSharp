@@ -37,17 +37,27 @@ namespace LinkupSharp.Serializers
     public class JsonPacketSerializer : IPacketSerializer
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(JsonPacketSerializer));
+        private static readonly JsonSerializerSettings settings;
+
+        static JsonPacketSerializer()
+        {
+            settings = new JsonSerializerSettings
+            {
+                NullValueHandling = NullValueHandling.Ignore,
+                Formatting = Formatting.None,
+            };
+        }
 
         public byte[] Serialize(Packet packet)
         {
-            return Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(packet));
+            return Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(packet, settings));
         }
 
         public Packet Deserialize(byte[] packet)
         {
             try
             {
-                if (packet.Length > 0)
+                if (packet != null && packet.Length > 0)
                     return JsonConvert.DeserializeObject<Packet>(Encoding.UTF8.GetString(packet));
             }
             catch (Exception ex)

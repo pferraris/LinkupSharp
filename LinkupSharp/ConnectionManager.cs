@@ -81,7 +81,6 @@ namespace LinkupSharp
 
         #region Listeners
 
-
         public void AddListener(IChannelListener listener)
         {
             if (listener == null) throw new ArgumentNullException("Listener cannot be null.");
@@ -100,29 +99,35 @@ namespace LinkupSharp
 
         public void AddListener<T>(string endpoint, X509Certificate2 certificate = null) where T : IPacketSerializer, new()
         {
+            endpoint = endpoint.Replace("+", "0.0.0.0");
             var uri = new Uri(endpoint);
-            IPAddress address;
             switch (uri.Scheme.ToLower())
             {
                 case "tcp":
                 case "ssl":
+                    IPAddress address;
                     if ("tcp".Equals(uri.Scheme.ToLower())) certificate = null;
                     if (IPAddress.TryParse(uri.Host, out address))
                         AddListener(new TcpChannelListener<T>(uri.Port, address, certificate));
                     else
                     {
-                        IPAddress[] addressList = Dns.GetHostAddresses(uri.Host);
-                        if (addressList != null)
+                        try
+                        {
+                            IPAddress[] addressList = Dns.GetHostAddresses(uri.Host);
                             foreach (var item in addressList)
                                 AddListener(new TcpChannelListener<T>(uri.Port, item, certificate));
-                        else
+                        }
+                        catch
+                        {
                             AddListener(new TcpChannelListener<T>(uri.Port, certificate));
+                        }
                     }
                     break;
                 case "http":
                 case "https":
+                    if ("http".Equals(uri.Scheme.ToLower())) certificate = null;
                     endpoint = endpoint.Replace("0.0.0.0", "+");
-                    AddListener(new WebChannelListener<T>(endpoint));
+                    AddListener(new WebChannelListener<T>(endpoint, certificate));
                     break;
                 case "ws":
                 case "wss":

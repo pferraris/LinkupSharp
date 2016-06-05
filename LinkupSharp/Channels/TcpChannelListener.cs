@@ -41,12 +41,12 @@ namespace LinkupSharp.Channels
     public class TcpChannelListener<T> : IChannelListener where T : IPacketSerializer, new()
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(TcpChannelListener<T>));
-        public int Port { get; private set; }
-        public IPAddress Address { get; private set; }
 
         private TcpListener listener;
         private bool listening;
         private Task listenerTask;
+        private int port;
+        private IPAddress address;
         private X509Certificate2 certificate;
 
         public TcpChannelListener(int port)
@@ -66,11 +66,11 @@ namespace LinkupSharp.Channels
 
         public TcpChannelListener(int port, IPAddress address, X509Certificate2 certificate)
         {
-            Port = port;
+            this.port = port;
             if (address == null)
-                Address = IPAddress.Any;
+                this.address = IPAddress.Any;
             else
-                Address = address;
+                this.address = address;
             this.certificate = certificate;
         }
 
@@ -78,7 +78,8 @@ namespace LinkupSharp.Channels
 
         public void Start()
         {
-            listener = new TcpListener(Address, Port);
+            if (listener != null) Stop();
+            listener = new TcpListener(address, port);
             listener.Start();
             listening = true;
             listenerTask = Task.Factory.StartNew(Listen);
@@ -115,17 +116,12 @@ namespace LinkupSharp.Channels
         {
             try
             {
-                var client = new TcpClientChannel<T>(certificate);
-                client.SetSocket(socket, true);
-                return client;
+                return new TcpClientChannel<T>(socket, certificate);
             }
             catch (Exception ex)
             {
                 log.Error("Cannot create client connection", ex);
                 socket.Close();
-                socket.GetStream().Close();
-                socket.Client.Disconnect(false);
-                socket.Client.Dispose();
                 return null;
             }
         }
@@ -139,8 +135,7 @@ namespace LinkupSharp.Channels
         private void OnClientConnected(IClientChannel clientChannel)
         {
             if (clientChannel == null) return;
-            if (ClientConnected != null)
-                ClientConnected(this, new ClientChannelEventArgs(clientChannel));
+            ClientConnected?.Invoke(this, new ClientChannelEventArgs(clientChannel));
         }
 
         #endregion Events

@@ -22,12 +22,12 @@ namespace LinkupSharpDemo
             certificateCer = new X509Certificate2(LoadResource("LinkupSharpDemo.Resources.certificate.cer"));
 
             var server = new TestServer();
-            server.AddListener("ssl://0.0.0.0:5650/", certificatePfx);
-            server.AddListener("http://0.0.0.0:5651/", certificatePfx);
-            server.AddListener("wss://localhost:5652/", certificatePfx);
-            server.AddListener<ProtoPacketSerializer>("ssl://0.0.0.0:5653/", certificatePfx);
-            server.AddListener<ProtoPacketSerializer>("http://0.0.0.0:5654/", certificatePfx);
-            server.AddListener<ProtoPacketSerializer>("wss://localhost:5655/", certificatePfx);
+            server.AddListener("ssl://+:5650/", certificatePfx);
+            server.AddListener("https://+:5651/", certificatePfx);
+            server.AddListener("wss://+:5652/", certificatePfx);
+            server.AddListener<ProtoPacketSerializer>("ssl://+:5653/", certificatePfx);
+            server.AddListener<ProtoPacketSerializer>("https://+:5654/", certificatePfx);
+            server.AddListener<ProtoPacketSerializer>("wss://+:5655/", certificatePfx);
 
             var client1 = new TestClient();
             client1.Connected += (sender, e) => client1.SignIn("client1@test");
@@ -64,10 +64,10 @@ namespace LinkupSharpDemo
         private static void Connect(ClientConnection client, X509Certificate2 certificate)
         {
             //client.Connect("ssl://localhost:5650/", certificate);
-            //client.Connect("http://localhost:5651/", certificate);
+            //client.Connect("https://localhost:5651/", certificate);
             client.Connect("wss://localhost:5652/", certificate);
             //client.Connect<ProtoPacketSerializer>("ssl://localhost:5653/", certificate);
-            //client.Connect<ProtoPacketSerializer>("http://localhost:5654/", certificate);
+            //client.Connect<ProtoPacketSerializer>("https://localhost:5654/", certificate);
             //client.Connect<ProtoPacketSerializer>("wss://localhost:5655/", certificate);
         }
 

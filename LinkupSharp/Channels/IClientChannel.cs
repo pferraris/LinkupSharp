@@ -36,7 +36,8 @@ namespace LinkupSharp.Channels
     {
         event EventHandler<PacketEventArgs> PacketReceived;
         event EventHandler<EventArgs> Closed;
-        Task Send(Packet packet);
+        Task Open();
         Task Close();
+        Task Send(Packet packet);
     }
 }

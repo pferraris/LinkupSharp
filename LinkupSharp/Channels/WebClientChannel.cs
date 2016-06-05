@@ -33,6 +33,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using System.Net.Http;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -50,12 +53,13 @@ namespace LinkupSharp.Channels
         private Timer inactivityTimer;
         private int inactivityTime;
         private string uri;
+        private X509Certificate2 certificate;
 
         internal string Id { get; private set; }
 
         static WebClientChannel()
         {
-            ServicePointManager.DefaultConnectionLimit = Int32.MaxValue;
+            ServicePointManager.DefaultConnectionLimit = int.MaxValue;
         }
 
         internal WebClientChannel(string id, bool serverSide)
@@ -68,20 +72,36 @@ namespace LinkupSharp.Channels
             pending = new Queue<Packet>();
         }
 
-        public WebClientChannel(string uri)
+        public WebClientChannel(string uri, X509Certificate2 certificate = null)
         {
             WebRequest.DefaultWebProxy.Credentials = CredentialCache.DefaultNetworkCredentials;
             this.uri = uri;
+            this.certificate = certificate;
+            ServicePointManager.ServerCertificateValidationCallback = CertificateValidation;
             Id = Guid.NewGuid().ToString();
             serverSide = false;
             serializer = new T();
             poolingTime = 1000;
             inactivityTime = 5000;
-            active = true;
-            readingTask = Task.Factory.StartNew(Read);
         }
 
         #region Methods
+
+        public async Task Open()
+        {
+            if (!serverSide)
+                await Task.Factory.StartNew(() =>
+                {
+                    active = true;
+                    readingTask = Task.Factory.StartNew(Read);
+                });
+        }
+
+        private bool CertificateValidation(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
+        {
+            if (this.certificate == null) return false;
+            return certificate.GetSerialNumberString().Equals(this.certificate.GetSerialNumberString());
+        }
 
         internal void DataReceived(byte[] buffer)
         {
@@ -99,65 +119,46 @@ namespace LinkupSharp.Channels
 
         private void Read()
         {
-            Task closing;
             while (active)
             {
                 try
                 {
-                    var webRequest = HttpWebRequest.Create(uri) as HttpWebRequest;
-                    webRequest.ContentType = "text/plain";
-                    webRequest.Headers.Add("ClientId", Id);
-                    webRequest.Timeout = inactivityTime;
-                    using (HttpWebResponse webResponse = webRequest.GetResponse() as HttpWebResponse)
+                    using (var client = new HttpClient())
                     {
-                        if (webResponse.StatusCode == HttpStatusCode.OK)
-                        {
-                            byte[] buffer = new byte[65536];
-                            int count;
-                            do
-                            {
-                                count = webResponse.GetResponseStream().Read(buffer, 0, buffer.Length);
-                                if (count > 0) DataReceived(buffer.Take(count).ToArray());
-                            } while (count > 0);
-                        }
-                        else if (webResponse.StatusCode != HttpStatusCode.NoContent)
-                            closing = Close();
-                        webResponse.Close();
+                        client.DefaultRequestHeaders.Add("ClientId", Id);
+                        var response = client.GetByteArrayAsync(new Uri(uri)).Result;
+                        if (response != null && response.Length > 0)
+                            DataReceived(response);
                     }
                 }
                 catch (Exception ex)
                 {
                     log.Error("Reading error", ex);
                 }
-                Thread.Sleep(poolingTime);
+                finally
+                {
+                    Thread.Sleep(poolingTime);
+                }
             }
         }
 
         public async Task Send(Packet packet)
         {
             if (serverSide)
-                await Task.Factory.StartNew(() =>
-                {
-                    lock (pending)
-                        pending.Enqueue(packet);
-                });
+                lock (pending)
+                    pending.Enqueue(packet);
             else if (active)
             {
                 try
                 {
                     byte[] buffer = serializer.Serialize(packet);
-                    var webRequest = WebRequest.Create(uri) as HttpWebRequest;
-                    webRequest.ContentType = "text/plain";
-                    webRequest.Headers.Add("ClientId", Id);
-                    webRequest.Method = "POST";
-                    webRequest.ContentLength = buffer.Length;
-                    using (var stream = webRequest.GetRequestStream())
-                        await stream.WriteAsync(buffer, 0, buffer.Length);
-                    using (HttpWebResponse webResponse = webRequest.GetResponse() as HttpWebResponse)
+                    using (var client = new HttpClient())
                     {
-                        if (webResponse.StatusCode != HttpStatusCode.OK)
-                            throw new InvalidOperationException(string.Format("StatusCode: {0}", ((HttpStatusCode)webResponse.StatusCode).ToString()));
-                        webResponse.Close();
+                        client.DefaultRequestHeaders.Add("ClientId", Id);
+                        var content = new ByteArrayContent(buffer);
+                        var response = await client.PostAsync(uri, content);
+                        if (!response.IsSuccessStatusCode)
+                            throw new InvalidOperationException($"StatusCode: {response.StatusCode}");
                     }
                 }
                 catch (Exception ex)
@@ -206,14 +207,12 @@ namespace LinkupSharp.Channels
 
         private void OnPacketReceived(Packet packet)
         {
-            if (PacketReceived != null)
-                PacketReceived(this, new PacketEventArgs(packet));
+            PacketReceived?.Invoke(this, new PacketEventArgs(packet));
         }
 
         private void OnClosed()
         {
-            if (Closed != null)
-                Closed(this, EventArgs.Empty);
+            Closed?.Invoke(this, EventArgs.Empty);
         }
 
         #endregion Events

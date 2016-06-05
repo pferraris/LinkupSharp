@@ -43,37 +43,37 @@ namespace LinkupSharp.Channels
     public class WebSocketClientChannel<T> : IClientChannel where T : IPacketSerializer, new()
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketClientChannel<T>));
+        private static readonly byte[] token = new byte[] { 0x0007, 0x000C, 0x000B };
 
-        private WebSocket socket;
+        private ClientWebSocket socket;
         private IPacketSerializer serializer;
         private Task readingTask;
         private CancellationTokenSource cancel;
+        private Uri url;
         private X509Certificate2 certificate;
 
         public WebSocketClientChannel(string url, X509Certificate2 certificate = null)
         {
+            this.url = new Uri(url);
             this.certificate = certificate;
             ServicePointManager.ServerCertificateValidationCallback = CertificateValidation;
-            ClientWebSocket socket = new ClientWebSocket();
-            socket.ConnectAsync(new Uri(url), CancellationToken.None).Wait();
-            SetSocket(socket);
         }
 
         #region Methods
+
+        public async Task Open()
+        {
+            socket = new ClientWebSocket();
+            await socket.ConnectAsync(url, CancellationToken.None);
+            serializer = new TokenizedPacketSerializer<T>(token);
+            cancel = new CancellationTokenSource();
+            readingTask = Task.Factory.StartNew(Read);
+        }
 
         private bool CertificateValidation(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
             if (this.certificate == null) return false;
             return certificate.GetSerialNumberString().Equals(this.certificate.GetSerialNumberString());
-        }
-
-        private void SetSocket(WebSocket socket)
-        {
-            this.socket = socket;
-            byte[] token = new byte[] { 0x0007, 0x000C, 0x000B };
-            serializer = new TokenizedPacketSerializer<T>(token);
-            cancel = new CancellationTokenSource();
-            readingTask = Task.Factory.StartNew(Read);
         }
 
         private void Read()
@@ -93,12 +93,12 @@ namespace LinkupSharp.Channels
                     while (packet != null)
                     {
                         OnPacketReceived(packet);
-                        packet = serializer.Deserialize(new byte[0]);
+                        packet = serializer.Deserialize();
                     }
                 }
                 catch { }
             }
-            socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Ok", CancellationToken.None).Wait();
+            socket.CloseAsync(WebSocketCloseStatus.NormalClosure, "Ok", CancellationToken.None);
             Task.Factory.StartNew(OnClosed);
         }
 
@@ -143,8 +143,7 @@ namespace LinkupSharp.Channels
 
         private void OnPacketReceived(Packet packet)
         {
-            if (PacketReceived != null)
-                PacketReceived(this, new PacketEventArgs(packet));
+            PacketReceived?.Invoke(this, new PacketEventArgs(packet));
         }
 
         private void OnClosed()
@@ -156,8 +155,7 @@ namespace LinkupSharp.Channels
             }
             if (socket != null) socket.Dispose();
             if (cancel != null) cancel.Dispose();
-            if (Closed != null)
-                Closed(this, EventArgs.Empty);
+            Closed?.Invoke(this, EventArgs.Empty);
         }
 
         #endregion Events

@@ -39,6 +39,7 @@ namespace LinkupSharp.Channels
     internal class WebSocketServerChannel<T> : IClientChannel where T : IPacketSerializer, new()
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketServerChannel<T>));
+        private static readonly byte[] token = new byte[] { 0x0007, 0x000C, 0x000B };
 
         private WebSocket socket;
         private IPacketSerializer serializer;
@@ -49,8 +50,6 @@ namespace LinkupSharp.Channels
             socket.OnOpen += Socket_OnOpen;
             socket.OnClose += Socket_OnClose;
             socket.OnMessage += Socket_OnMessage;
-            socket.OnError += Socket_OnError;
-            byte[] token = new byte[] { 0x0007, 0x000C, 0x000B };
             serializer = new TokenizedPacketSerializer<T>(token);
             socket.ConnectAsServer();
         }
@@ -79,7 +78,7 @@ namespace LinkupSharp.Channels
                     while (packet != null)
                     {
                         OnPacketReceived(packet);
-                        packet = serializer.Deserialize(new byte[0]);
+                        packet = serializer.Deserialize();
                     }
                 }
             }
@@ -89,14 +88,14 @@ namespace LinkupSharp.Channels
             }
         }
 
-        private void Socket_OnError(object sender, ErrorEventArgs e)
-        {
-            log.Error(e.Message);
-        }
-
         #endregion Socket Events
 
         #region Methods
+
+        public async Task Open()
+        {
+            await Task.FromResult<object>(null);
+        }
 
         public async Task Send(Packet packet)
         {
@@ -105,7 +104,7 @@ namespace LinkupSharp.Channels
                 try
                 {
                     byte[] buffer = serializer.Serialize(packet);
-                    socket.SendAsync(Encoding.UTF8.GetString(buffer), x => { });
+                    socket.SendAsync(buffer, null);
                 }
                 catch (Exception ex)
                 {
