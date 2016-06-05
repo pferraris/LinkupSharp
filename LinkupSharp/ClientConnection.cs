@@ -36,6 +36,8 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Security.Cryptography.X509Certificates;
 using LinkupSharp.Security.Authentication;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace LinkupSharp
 {
@@ -178,74 +180,75 @@ namespace LinkupSharp
 
         #region Methods
 
-        public void Send(object content)
+        public async Task Send(object content)
         {
             if (content is Packet)
-                Send(content as Packet);
+                await Send(content as Packet);
             else
-                Send(new Packet(content));
+                await Send(new Packet(content));
         }
 
-        public void Send(Packet packet)
+        public async Task Send(Packet packet)
         {
             if (Channel != null)
             {
                 if ((!serverSide) && (Session != null))
                     packet.Sender = Session.Id;
-                Channel.Send(packet);
+                await Channel.Send(packet);
             }
         }
 
-        public void Connect(string endpoint, X509Certificate2 certificate = null)
+        public async Task Connect(string endpoint, X509Certificate2 certificate = null)
         {
-            Connect<JsonPacketSerializer>(endpoint, certificate);
+            await Connect<JsonPacketSerializer>(endpoint, certificate);
         }
 
-        public void Connect<T>(string endpoint, X509Certificate2 certificate = null) where T : IPacketSerializer, new()
+        public async Task Connect<T>(string endpoint, X509Certificate2 certificate = null) where T : IPacketSerializer, new()
         {
             var uri = new Uri(endpoint);
             switch (uri.Scheme.ToLower())
             {
                 case "tcp":
                 case "ssl":
-                    Connect(new TcpClientChannel<T>(uri.Host, uri.Port, certificate));
+                    await Connect(new TcpClientChannel<T>(uri.Host, uri.Port, certificate));
                     break;
                 case "http":
                 case "https":
-                    Connect(new WebClientChannel<T>(uri.AbsoluteUri));
+                    await Connect(new WebClientChannel<T>(uri.AbsoluteUri, certificate));
                     break;
                 case "ws":
                 case "wss":
-                    Connect(new WebSocketClientChannel<T>(uri.AbsoluteUri, certificate));
+                    await Connect(new WebSocketClientChannel<T>(uri.AbsoluteUri, certificate));
                     break;
             }
         }
 
-        public void Connect(IClientChannel channel)
+        public async Task Connect(IClientChannel channel)
         {
             if (Channel == null)
             {
                 Channel = channel;
                 Channel.PacketReceived += Channel_PacketReceived;
                 Channel.Closed += Channel_Closed;
+                await Channel.Open();
             }
         }
 
-        public void Disconnect()
+        public async Task Disconnect()
         {
             if (serverSide)
-                Disconnect(Reasons.ServerRequest);
+                await Disconnect(Reasons.ServerRequest);
             else
-                Disconnect(Reasons.ClientRequest);
+                await Disconnect(Reasons.ClientRequest);
         }
 
-        internal void Disconnect(Reasons reason, bool sendDisconnected = true)
+        internal async Task Disconnect(Reasons reason, bool sendDisconnected = true)
         {
-            disconnected = new Disconnected(reason);
             if (Channel != null)
             {
-                if (sendDisconnected) Send(disconnected);
-                Channel.Close();
+                disconnected = new Disconnected(reason);
+                if (sendDisconnected) await Send(disconnected);
+                await Channel.Close();
             }
         }
 
@@ -269,59 +272,50 @@ namespace LinkupSharp
             Channel.Closed -= Channel_Closed;
             Channel = null;
             IsConnected = false;
-            if (Disconnected != null)
-                Disconnected(this, new DisconnectedEventArgs(disconnected));
+            Disconnected?.Invoke(this, new DisconnectedEventArgs(disconnected));
         }
 
         protected internal virtual void OnConnected()
         {
             IsConnected = true;
-            if (Connected != null)
-                Connected(this, EventArgs.Empty);
+            Connected?.Invoke(this, EventArgs.Empty);
         }
 
         protected internal virtual void OnSignInRequired(SignIn signIn)
         {
-            if (SignInRequired != null)
-                SignInRequired(this, new SignInEventArgs(signIn));
+            SignInRequired?.Invoke(this, new SignInEventArgs(signIn));
         }
 
         protected internal virtual void OnSignOutRequired(SignOut signOut)
         {
-            if (SignOutRequired != null)
-                SignOutRequired(this, new SessionEventArgs(signOut.Session));
+            SignOutRequired?.Invoke(this, new SessionEventArgs(signOut.Session));
         }
 
         protected internal void OnRestoreSessionRequired(Session session)
         {
-            if (RestoreSessionRequired != null)
-                RestoreSessionRequired(this, new SessionEventArgs(session));
+            RestoreSessionRequired?.Invoke(this, new SessionEventArgs(session));
         }
 
         protected internal virtual void OnSignedIn(Session session)
         {
             Session = session;
-            if (SignedIn != null)
-                SignedIn(this, EventArgs.Empty);
+            SignedIn?.Invoke(this, EventArgs.Empty);
         }
 
         protected internal virtual void OnSignedOut(Session session, bool current)
         {
             if (current) Session = null;
-            if (SignedOut != null)
-                SignedOut(this, EventArgs.Empty);
+            SignedOut?.Invoke(this, EventArgs.Empty);
         }
 
         protected internal virtual void OnAuthenticationFailed()
         {
-            if (AuthenticationFailed != null)
-                AuthenticationFailed(this, EventArgs.Empty);
+            AuthenticationFailed?.Invoke(this, EventArgs.Empty);
         }
 
         protected internal virtual void OnPacketReceived(PacketEventArgs e)
         {
-            if (PacketReceived != null)
-                PacketReceived(this, e);
+            PacketReceived?.Invoke(this, e);
         }
 
         #endregion Events
