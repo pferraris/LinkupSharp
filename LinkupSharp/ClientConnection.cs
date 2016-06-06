@@ -27,16 +27,14 @@
 */
 #endregion License
 
-using LinkupSharp.Security;
 using LinkupSharp.Channels;
 using LinkupSharp.Modules;
+using LinkupSharp.Security;
+using LinkupSharp.Security.Authentication;
 using LinkupSharp.Serializers;
 using System;
 using System.Collections.Generic;
-using System.Collections.ObjectModel;
 using System.Security.Cryptography.X509Certificates;
-using LinkupSharp.Security.Authentication;
-using System.Threading;
 using System.Threading.Tasks;
 
 namespace LinkupSharp
@@ -65,10 +63,7 @@ namespace LinkupSharp
         private SessionModule sessionModule;
         private List<IClientModule> modules;
 
-        public ReadOnlyCollection<IClientModule> Modules
-        {
-            get { return modules.AsReadOnly(); }
-        }
+        public IEnumerable<IClientModule> Modules { get { return modules.ToArray(); } }
 
         public void AddModule(IClientModule module)
         {
@@ -84,7 +79,10 @@ namespace LinkupSharp
         {
             if (module == null) throw new ArgumentNullException("Module cannot be null.");
             if (modules.Contains(module))
+            {
                 modules.Remove(module);
+                module.OnRemoved(this);
+            }
         }
 
         #endregion Modules
@@ -113,16 +111,6 @@ namespace LinkupSharp
         #endregion Channel
 
         #region Authentication
-
-        public void SignIn(string username, string domain)
-        {
-            SignIn(new SignIn(new Id(username, domain)));
-        }
-
-        public void SignIn(string id)
-        {
-            SignIn(new SignIn(id));
-        }
 
         public void SignIn(Id id)
         {
@@ -180,75 +168,72 @@ namespace LinkupSharp
 
         #region Methods
 
-        public async Task Send(object content)
+        public void Send(object content)
         {
             if (content is Packet)
-                await Send(content as Packet);
+                Send(content as Packet);
             else
-                await Send(new Packet(content));
+                Send(new Packet(content));
         }
 
-        public async Task Send(Packet packet)
+        public void Send(Packet packet)
         {
             if (Channel != null)
             {
                 if ((!serverSide) && (Session != null))
                     packet.Sender = Session.Id;
-                await Channel.Send(packet);
+                Channel.Send(packet);
             }
         }
 
-        public async Task Connect(string endpoint, X509Certificate2 certificate = null)
+        public void Connect(string endpoint, X509Certificate2 certificate = null)
         {
-            await Connect<JsonPacketSerializer>(endpoint, certificate);
+            Connect<JsonPacketSerializer>(endpoint, certificate);
         }
 
-        public async Task Connect<T>(string endpoint, X509Certificate2 certificate = null) where T : IPacketSerializer, new()
+        public void Connect<T>(string endpoint, X509Certificate2 certificate = null) where T : IPacketSerializer, new()
         {
             var uri = new Uri(endpoint);
             switch (uri.Scheme.ToLower())
             {
                 case "tcp":
                 case "ssl":
-                    await Connect(new TcpClientChannel<T>(uri.Host, uri.Port, certificate));
+                    Connect(new TcpClientChannel<T>(uri.Host, uri.Port, certificate));
                     break;
                 case "http":
                 case "https":
-                    await Connect(new WebClientChannel<T>(uri.AbsoluteUri, certificate));
+                    Connect(new WebClientChannel<T>(uri.AbsoluteUri, certificate));
                     break;
                 case "ws":
                 case "wss":
-                    await Connect(new WebSocketClientChannel<T>(uri.AbsoluteUri, certificate));
+                    Connect(new WebSocketClientChannel<T>(uri.AbsoluteUri, certificate));
                     break;
             }
         }
 
-        public async Task Connect(IClientChannel channel)
+        public void Connect(IClientChannel channel)
         {
             if (Channel == null)
             {
                 Channel = channel;
                 Channel.PacketReceived += Channel_PacketReceived;
                 Channel.Closed += Channel_Closed;
-                await Channel.Open();
+                Channel.Open().Wait();
             }
         }
 
-        public async Task Disconnect()
+        public void Disconnect()
         {
-            if (serverSide)
-                await Disconnect(Reasons.ServerRequest);
-            else
-                await Disconnect(Reasons.ClientRequest);
+            Disconnect(Reasons.ClientRequest);
         }
 
-        internal async Task Disconnect(Reasons reason, bool sendDisconnected = true)
+        internal void Disconnect(Reasons reason, bool sendDisconnected = true)
         {
             if (Channel != null)
             {
                 disconnected = new Disconnected(reason);
-                if (sendDisconnected) await Send(disconnected);
-                await Channel.Close();
+                if (sendDisconnected) Send(disconnected);
+                Channel.Close();
             }
         }
 

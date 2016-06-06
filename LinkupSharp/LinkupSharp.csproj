@@ -88,8 +88,6 @@
     </Compile>
     <Compile Include="Serializers\IPacketSerializer.cs" />
     <Compile Include="Modules\SessionModule.cs" />
-    <Compile Include="Modules\ClientConsoleLoggerModule.cs" />
-    <Compile Include="Modules\ServerConsoleLoggerModule.cs" />
     <Compile Include="Modules\ClientModule.cs" />
     <Compile Include="Modules\ServerModule.cs" />
     <Compile Include="Packet.cs" />

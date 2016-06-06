@@ -40,16 +40,16 @@ namespace LinkupSharp
 
         public Id(string username, string domain)
         {
-            if (String.IsNullOrEmpty(username)) throw new ArgumentException("Username cannot be null");
-            if (String.IsNullOrEmpty(domain)) throw new ArgumentException("Domain cannot be null");
+            if (string.IsNullOrEmpty(username)) throw new ArgumentException("Username cannot be null");
+            if (string.IsNullOrEmpty(domain)) throw new ArgumentException("Domain cannot be null");
             Username = username.ToLower();
             Domain = domain.ToLower();
         }
 
         public Id(string id)
         {
-            if (String.IsNullOrEmpty(id)) throw new ArgumentException("ID cannot be null");
-            if (!id.Contains("@")) id = String.Format("{0}@anonymous", id);
+            if (string.IsNullOrEmpty(id)) throw new ArgumentException("ID cannot be null");
+            if (!id.Contains("@")) id = string.Format("{0}@anonymous", id);
             string[] values = id.Split("@".ToCharArray(), StringSplitOptions.RemoveEmptyEntries);
             Username = values[0].ToLower();
             Domain = values[1].ToLower();
@@ -68,7 +68,7 @@ namespace LinkupSharp
 
         public override string ToString()
         {
-            return String.Format("{0}@{1}", Username, Domain);
+            return string.Format("{0}@{1}", Username, Domain);
         }
 
         public static bool operator ==(Id a, Id b)

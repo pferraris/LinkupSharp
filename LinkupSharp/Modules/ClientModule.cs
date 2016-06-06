@@ -40,6 +40,7 @@ namespace LinkupSharp.Modules
         #region Implements IClientModule
 
         public virtual void OnAdded(ClientConnection client) { }
+        public virtual void OnRemoved(ClientConnection client) { }
 
         public bool Process(Packet packet, ClientConnection client)
         {

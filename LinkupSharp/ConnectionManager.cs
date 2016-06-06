@@ -76,7 +76,7 @@ namespace LinkupSharp
             ClearAuthenticators();
             ClearModules();
             foreach (var client in clients.ToArray())
-                client.Disconnect();
+                client.Disconnect(Reasons.ServerRequest);
         }
 
         #region Listeners
@@ -236,7 +236,10 @@ namespace LinkupSharp
         {
             if (module == null) throw new ArgumentNullException("Module cannot be null.");
             if (modules.Contains(module))
+            {
                 modules.Remove(module);
+                module.OnRemoved(this);
+            }
         }
 
         public void ClearModules()
@@ -355,6 +358,11 @@ namespace LinkupSharp
         {
             if (ClientDisconnected != null)
                 ClientDisconnected(this, new ClientConnectionEventArgs(client, id));
+        }
+
+        public void AddListener(string v, object certificatePfx)
+        {
+            throw new NotImplementedException();
         }
 
         #endregion Events

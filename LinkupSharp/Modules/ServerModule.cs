@@ -40,12 +40,9 @@ namespace LinkupSharp.Modules
 
         #region Implements IServerPacketInterceptor
 
-        private ConnectionManager manager;
+        public virtual void OnAdded(ConnectionManager manager) { }
 
-        public virtual void OnAdded(ConnectionManager manager)
-        {
-            this.manager = manager;
-        }
+        public virtual void OnRemoved(ConnectionManager manager) { }
 
         public bool Process(Packet packet, ClientConnection client, ConnectionManager manager)
         {

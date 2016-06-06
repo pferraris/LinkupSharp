@@ -1,13 +1,8 @@
 ﻿using LinkupSharp;
-using LinkupSharp.Modules;
-using LinkupSharp.Security.Authentication;
-using LinkupSharp.Serializers;
+using LinkupSharpTestModel;
 using log4net.Config;
 using System;
-using System.Linq;
-using System.Reflection;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
+using System.Threading.Tasks;
 
 namespace LinkupSharpDemo
 {
@@ -18,225 +13,48 @@ namespace LinkupSharpDemo
         static void Main(string[] args)
         {
             XmlConfigurator.Configure();
-            certificatePfx = new X509Certificate2(LoadResource("LinkupSharpDemo.Resources.certificate.pfx"), LoadResourceString("LinkupSharpDemo.Resources.certificate.key"));
-            certificateCer = new X509Certificate2(LoadResource("LinkupSharpDemo.Resources.certificate.cer"));
 
-            var server = new TestServer();
-            server.AddListener("ssl://+:5650/", certificatePfx);
-            server.AddListener("https://+:5651/", certificatePfx);
-            server.AddListener("wss://+:5652/", certificatePfx);
-            server.AddListener<ProtoPacketSerializer>("ssl://+:5653/", certificatePfx);
-            server.AddListener<ProtoPacketSerializer>("https://+:5654/", certificatePfx);
-            server.AddListener<ProtoPacketSerializer>("wss://+:5655/", certificatePfx);
+            var endpoints = new string[] { "ssl://+:5650/", "https://+:5651/", "wss://+:5652/" };
 
-            var client1 = new TestClient();
-            client1.Connected += (sender, e) => client1.SignIn("client1@test");
-            client1.SignedIn += client1_SignedIn;
-            client1.ContactsReceived += (senderInt, contacts) =>
+            using (var server = new TestServer(endpoints, Resources.CertificatePfx))
+            using (var client1 = new TestClient())
+            using (var client2 = new TestClient())
             {
-                lock (syncLock)
-                {
-                    Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.WriteLine("{0} => Contacts: {1}", client1.Id, string.Join<Id>("; ", contacts));
-                    Console.ResetColor();
-                }
-            };
+                Console.WriteLine("Adding module to clients...");
+                client1.AddModule(new TestClientModule());
+                client2.AddModule(new TestClientModule());
 
-            int messagesCount = 0;
-            client1.MessageReceived += (senderInt, message) =>
-            {
-                lock (syncLock)
-                {
-                    Console.ForegroundColor = ConsoleColor.Cyan;
-                    Console.WriteLine("{0} => {1}", client1.Id, message.Text);
-                    Console.ResetColor();
-                }
-                if (++messagesCount == 1)
-                    client1.SendMessage("Hello Client2 ♪", "client2@test");
-                else
-                    client1.Disconnect();
-            };
+                Console.WriteLine("Connecting clients...");
+                client1.Connect("ssl://localhost:5650/", Resources.CertificateCer).Wait();
+                client2.Connect("wss://localhost:5652/", Resources.CertificateCer).Wait();
 
-            Connect(client1, certificateCer);
-            Console.ReadLine();
-        }
+                Console.WriteLine("Signing in clients...");
+                client1.SignIn("client1@tests").Wait();
+                client2.SignIn("client2@tests").Wait();
 
-        private static void Connect(ClientConnection client, X509Certificate2 certificate)
-        {
-            //client.Connect("ssl://localhost:5650/", certificate);
-            //client.Connect("https://localhost:5651/", certificate);
-            client.Connect("wss://localhost:5652/", certificate);
-            //client.Connect<ProtoPacketSerializer>("ssl://localhost:5653/", certificate);
-            //client.Connect<ProtoPacketSerializer>("https://localhost:5654/", certificate);
-            //client.Connect<ProtoPacketSerializer>("wss://localhost:5655/", certificate);
-        }
+                Console.WriteLine("Sending greetings...");
+                client1.Send(new Packet(new Message("Hello! client 2")) { Recipient = "client2@tests" } ).Wait();
+                client2.Send(new Packet(new Message("Hello! client 1")) { Recipient = "client1@tests" }).Wait();
+                Task.Delay(3000).Wait();
 
-        private static X509Certificate2 certificatePfx;
-        private static X509Certificate2 certificateCer;
+                Console.WriteLine("Disconnecting client1...");
+                client1.Disconnect().Wait();
 
-        private static byte[] LoadResource(string resourceName)
-        {
-            using (var stream = Assembly.GetExecutingAssembly().GetManifestResourceStream(resourceName))
-            {
-                var buffer = new byte[8 * 1024];
-                var len = stream.Read(buffer, 0, buffer.Length);
-                return buffer.Take(len).ToArray();
+                Console.WriteLine("Reconnecting client1 & restore session...");
+                client1.Connect("https://localhost:5651/", Resources.CertificateCer).Wait();
+                client1.RestoreSession(client1.Session).Wait();
+
+                Console.WriteLine("Sending goodbye...");
+                client1.Send(new Packet(new Message("Bye! client 2")) { Recipient = "client2@tests" }).Wait();
+                client2.Send(new Packet(new Message("Bye! client 1")) { Recipient = "client1@tests" }).Wait();
+                Task.Delay(3000).Wait();
+
+                Console.WriteLine("Disconnecting clients...");
+                client1.Disconnect().Wait();
+                client2.Disconnect().Wait();
             }
-        }
 
-        private static string LoadResourceString(string resourceName)
-        {
-            return Encoding.UTF8.GetString(LoadResource(resourceName));
-        }
-
-        private static void client1_SignedIn(object sender, EventArgs e)
-        {
-            var client2 = new TestClient();
-
-            client2.Connected += (senderInt, eInt) =>
-            {
-                if (client2.Session == null)
-                    client2.SignIn("client2@test");
-                else
-                    client2.RestoreSession((senderInt as TestClient).Session);
-            };
-
-            client2.SignedIn += (senderInt, eInt) =>
-            {
-                client2.SendMessage("Hi client1!!", "client1@test");
-            };
-
-            bool reconnected = false;
-            client2.Disconnected += (senderInt, eInt) =>
-            {
-                if (!reconnected)
-                {
-                    reconnected = true;
-                    Connect(client2, certificateCer);
-                }
-            };
-
-            client2.ContactsReceived += (senderInt, contacts) =>
-            {
-                lock (syncLock)
-                {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("{0} => Contacts: {1}", client2.Id, string.Join<Id>("; ", contacts));
-                    Console.ResetColor();
-                }
-            };
-
-            client2.MessageReceived += (senderInt, message) =>
-            {
-                lock (syncLock)
-                {
-                    Console.ForegroundColor = ConsoleColor.Green;
-                    Console.WriteLine("{0} => {1}", client2.Id, message.Text);
-                    Console.ResetColor();
-                }
-                client2.Disconnect();
-            };
-
-            Connect(client2, certificateCer);
-        }
-    }
-
-    public class TestServer : ConnectionManager
-    {
-        public TestServer()
-        {
-            AddAuthenticator(new AnonymousAuthenticator());
-            AddModule(new TestServerModule());
-        }
-    }
-
-    public class TestClient : ClientConnection
-    {
-        public TestClient()
-        {
-            AddModule(new TestClientModule());
-        }
-
-        public void SendMessage(string text, Id recipient)
-        {
-            Send(new Packet(new Message(text)) { Recipient = recipient });
-        }
-
-        public event EventHandler<Id[]> ContactsReceived;
-        public event EventHandler<Message> MessageReceived;
-
-        public void OnMessageReceived(Message message)
-        {
-            if (MessageReceived != null)
-                MessageReceived(this, message);
-        }
-
-        public void OnContactsReceived(Id[] contacts)
-        {
-            if (ContactsReceived != null)
-                ContactsReceived(this, contacts);
-        }
-    }
-
-    public class TestServerModule : ServerModule
-    {
-        public TestServerModule()
-        {
-            RegisterHandler<Message>(HandleMessage);
-        }
-
-        [Authenticated]
-        private bool HandleMessage(Packet packet, ClientConnection client, ConnectionManager manager)
-        {
-            if ((packet.Recipient != null) && (manager.Clients.Any(x => x.Id == packet.Recipient)))
-                foreach (var recipient in manager.Clients.Where(x => x.Id == packet.Recipient))
-                    recipient.Send(packet);
-            return true;
-        }
-
-        public override void OnAdded(ConnectionManager manager)
-        {
-            base.OnAdded(manager);
-            manager.ClientConnected += SendClients;
-            manager.ClientDisconnected += SendClients;
-        }
-
-        private void SendClients(object sender, ClientConnectionEventArgs e)
-        {
-            var clients = (sender as ConnectionManager).Clients;
-            foreach (var client in clients)
-                client.Send(new Packet(clients.Select(x => x.Id).ToArray()) { Recipient = client.Id });
-        }
-    }
-
-    public class TestClientModule : ClientModule
-    {
-        public TestClientModule()
-        {
-            RegisterHandler<Id[]>(HandleContacts);
-            RegisterHandler<Message>(HandleMessage);
-        }
-
-        private bool HandleContacts(Packet packet, ClientConnection client)
-        {
-            (client as TestClient).OnContactsReceived(packet.GetContent<Id[]>());
-            return true;
-        }
-
-        private bool HandleMessage(Packet packet, ClientConnection client)
-        {
-            (client as TestClient).OnMessageReceived(packet.GetContent<Message>());
-            return true;
-        }
-    }
-
-    public class Message
-    {
-        public string Text { get; private set; }
-
-        public Message(string text)
-        {
-            Text = text;
+            Console.ReadLine();
         }
     }
 }

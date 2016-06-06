@@ -32,6 +32,7 @@ namespace LinkupSharp.Modules
     public interface IServerModule
     {
         void OnAdded(ConnectionManager manager);
+        void OnRemoved(ConnectionManager manager);
         bool Process(Packet packet, ClientConnection client, ConnectionManager manager);
     }
 }
