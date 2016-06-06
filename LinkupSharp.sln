@@ -15,6 +15,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LinkupSharpTestModel", "Lin
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{EC7BD95E-17F5-47AA-955C-E8480A66B05C}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LinkupSharp.Management", "LinkupSharp.Management\LinkupSharp.Management.csproj", "{95133B17-FAA1-4A79-8755-80AA3EBCB9CC}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LinkupSharp.ManagerDemo", "LinkupSharp.ManagerDemo\LinkupSharp.ManagerDemo.csproj", "{7D465DB2-6687-4F08-B893-8A367D2A2D7B}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -41,6 +45,14 @@ Global
 		{55E38A51-E4D9-41E1-BCC9-1FEC9F910934}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{55E38A51-E4D9-41E1-BCC9-1FEC9F910934}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{55E38A51-E4D9-41E1-BCC9-1FEC9F910934}.Release|Any CPU.Build.0 = Release|Any CPU
+		{95133B17-FAA1-4A79-8755-80AA3EBCB9CC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{95133B17-FAA1-4A79-8755-80AA3EBCB9CC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{95133B17-FAA1-4A79-8755-80AA3EBCB9CC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{95133B17-FAA1-4A79-8755-80AA3EBCB9CC}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7D465DB2-6687-4F08-B893-8A367D2A2D7B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7D465DB2-6687-4F08-B893-8A367D2A2D7B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7D465DB2-6687-4F08-B893-8A367D2A2D7B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7D465DB2-6687-4F08-B893-8A367D2A2D7B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
@@ -49,5 +61,6 @@ Global
 		{F982138A-7312-48ED-9B2E-77BCFDD4739B} = {EC7BD95E-17F5-47AA-955C-E8480A66B05C}
 		{A7CF0AF6-2281-4240-B9E8-34C85FD56917} = {EC7BD95E-17F5-47AA-955C-E8480A66B05C}
 		{55E38A51-E4D9-41E1-BCC9-1FEC9F910934} = {EC7BD95E-17F5-47AA-955C-E8480A66B05C}
+		{7D465DB2-6687-4F08-B893-8A367D2A2D7B} = {EC7BD95E-17F5-47AA-955C-E8480A66B05C}
 	EndGlobalSection
 EndGlobal
