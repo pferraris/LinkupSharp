@@ -3,8 +3,8 @@ using LinkupSharp.Modules;
 using Microsoft.Owin.Hosting;
 using Owin;
 using System.Web.Http;
-using System.Configuration;
-using System.Collections.Generic;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 
 namespace LinkupSharp.Management
 {
@@ -21,6 +21,9 @@ namespace LinkupSharp.Management
             host = WebApp.Start(endpoint, app =>
             {
                 var config = new HttpConfiguration();
+                config.Formatters.JsonFormatter.SerializerSettings.NullValueHandling = NullValueHandling.Ignore;
+                config.Formatters.JsonFormatter.SerializerSettings.Formatting = Formatting.Indented;
+                config.Formatters.JsonFormatter.SerializerSettings.ContractResolver = new CamelCasePropertyNamesContractResolver();
                 config.Properties.TryAdd("LinkupManagementModule", this);
                 config.MapHttpAttributeRoutes();
                 app.UseWebApi(config);

@@ -71,8 +71,13 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="ClientsController.cs" />
+    <Compile Include="ApiControllerBase.cs" />
+    <Compile Include="Controllers\AuthorizersController.cs" />
+    <Compile Include="Controllers\AuthenticatorsController.cs" />
+    <Compile Include="Controllers\ClientsController.cs" />
+    <Compile Include="Controllers\ListenersController.cs" />
     <Compile Include="LinkupManagementModule.cs" />
+    <Compile Include="Controllers\ModulesController.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
