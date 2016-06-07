@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using LinkupSharp.Modules;
+using System.Linq;
 using System.Web.Http;
 
 namespace LinkupSharp.Management.Controllers
@@ -10,7 +11,17 @@ namespace LinkupSharp.Management.Controllers
         [Route("")]
         public IHttpActionResult Get()
         {
-            return Ok(Module.Manager.Modules.ToArray());
+            return Ok(Module.Manager.Modules.Select(x => new
+            {
+                Type = x.GetType().Name.Replace("`1", "")
+            }).ToArray());
+        }
+
+        [HttpGet]
+        [Route("available")]
+        public IHttpActionResult Available()
+        {
+            return Ok(DependencyHelper.GetClasses<IServerModule>().Select(x => x.Name.Replace("`1", "")).ToArray());
         }
     }
 }

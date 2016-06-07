@@ -16,7 +16,8 @@ namespace LinkupSharp.Management.Controllers
                 Channel = new
                 {
                     Type = x.Channel.GetType().Name.Replace("`1", ""),
-                    Endpoint = x.Channel.Endpoint
+                    Endpoint = x.Channel.Endpoint,
+                    Certificate = x.Channel.Certificate?.Subject
                 }
             }).ToArray());
         }

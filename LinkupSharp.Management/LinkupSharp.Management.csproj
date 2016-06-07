@@ -76,6 +76,7 @@
     <Compile Include="Controllers\AuthenticatorsController.cs" />
     <Compile Include="Controllers\ClientsController.cs" />
     <Compile Include="Controllers\ListenersController.cs" />
+    <Compile Include="DependencyHelper.cs" />
     <Compile Include="LinkupManagementModule.cs" />
     <Compile Include="Controllers\ModulesController.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

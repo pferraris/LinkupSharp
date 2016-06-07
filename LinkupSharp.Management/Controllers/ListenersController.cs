@@ -1,4 +1,5 @@
-﻿using System.Linq;
+﻿using LinkupSharp.Channels;
+using System.Linq;
 using System.Web.Http;
 
 namespace LinkupSharp.Management.Controllers
@@ -16,6 +17,13 @@ namespace LinkupSharp.Management.Controllers
                 Endpoint = x.Endpoint,
                 Certificate = x.Certificate?.Subject
             }).ToArray());
+        }
+
+        [HttpGet]
+        [Route("available")]
+        public IHttpActionResult Available()
+        {
+            return Ok(DependencyHelper.GetClasses<IChannelListener>().Select(x => x.Name.Replace("`1", "")).ToArray());
         }
     }
 }
