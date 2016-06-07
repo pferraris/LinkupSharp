@@ -28,12 +28,15 @@
 #endregion License
 
 using System;
+using System.Security.Cryptography.X509Certificates;
 
 namespace LinkupSharp.Channels
 {
     public interface IChannelListener
     {
         event EventHandler<ClientChannelEventArgs> ClientConnected;
+        string Endpoint { get; set; }
+        X509Certificate2 Certificate { get; set; }
         void Start();
         void Stop();
     }

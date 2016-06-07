@@ -30,6 +30,7 @@
 using LinkupSharp.Serializers;
 using log4net;
 using System;
+using System.Collections.Generic;
 using System.Net;
 using System.Net.Sockets;
 using System.Security.Cryptography.X509Certificates;
@@ -42,45 +43,46 @@ namespace LinkupSharp.Channels
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(TcpChannelListener<T>));
 
-        private TcpListener listener;
+        private List<TcpListener> listeners;
         private bool listening;
         private Task listenerTask;
-        private int port;
-        private IPAddress address;
-        private X509Certificate2 certificate;
 
-        public TcpChannelListener(int port)
-            : this(port, null, null)
-        {
-        }
+        public string Endpoint { get; set; }
+        public X509Certificate2 Certificate { get; set; }
 
-        public TcpChannelListener(int port, IPAddress address)
-            : this(port, address, null)
+        public TcpChannelListener()
         {
-        }
-
-        public TcpChannelListener(int port, X509Certificate2 certificate)
-            : this(port, null, certificate)
-        {
-        }
-
-        public TcpChannelListener(int port, IPAddress address, X509Certificate2 certificate)
-        {
-            this.port = port;
-            if (address == null)
-                this.address = IPAddress.Any;
-            else
-                this.address = address;
-            this.certificate = certificate;
+            listeners = new List<TcpListener>();
         }
 
         #region Methods
 
         public void Start()
         {
-            if (listener != null) Stop();
-            listener = new TcpListener(address, port);
-            listener.Start();
+            if (string.IsNullOrEmpty(Endpoint)) return;
+            if (listeners.Count > 0) Stop();
+            var endpoint = Endpoint.Replace("+", "0.0.0.0");
+            var uri = new Uri(endpoint);
+            IPAddress address;
+            if (IPAddress.TryParse(uri.Host, out address))
+            {
+                listeners.Add(new TcpListener(address, uri.Port));
+            }
+            else
+            {
+                try
+                {
+                    IPAddress[] addressList = Dns.GetHostAddresses(uri.Host);
+                    foreach (var item in addressList)
+                        listeners.Add(new TcpListener(item, uri.Port));
+                }
+                catch
+                {
+                    listeners.Add(new TcpListener(IPAddress.Any, uri.Port));
+                }
+            }
+            foreach (var listener in listeners)
+                listener.Start();
             listening = true;
             listenerTask = Task.Factory.StartNew(Listen);
         }
@@ -89,8 +91,11 @@ namespace LinkupSharp.Channels
         {
             listening = false;
             listenerTask.Wait();
-            listener.Stop();
-            listener = null;
+            foreach (var listener in listeners.ToArray())
+            {
+                listener.Stop();
+                listeners.Remove(listener);
+            }
             listenerTask.Dispose();
             listenerTask = null;
         }
@@ -99,15 +104,18 @@ namespace LinkupSharp.Channels
         {
             while (listening)
             {
-                if (listener.Pending())
-                    try
-                    {
-                        OnClientConnected(CreateClient(listener.AcceptTcpClient()));
-                    }
-                    catch (Exception ex)
-                    {
-                        log.Error("Error when client connected", ex);
-                    }
+                foreach (var listener in listeners)
+                {
+                    if (listener.Pending())
+                        try
+                        {
+                            OnClientConnected(CreateClient(listener.AcceptTcpClient()));
+                        }
+                        catch (Exception ex)
+                        {
+                            log.Error("Error when client connected", ex);
+                        }
+                }
                 Thread.Sleep(50);
             }
         }
@@ -116,7 +124,7 @@ namespace LinkupSharp.Channels
         {
             try
             {
-                return new TcpClientChannel<T>(socket, certificate);
+                return new TcpClientChannel<T>(socket, Certificate);
             }
             catch (Exception ex)
             {

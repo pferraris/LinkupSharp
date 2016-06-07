@@ -40,22 +40,25 @@ namespace LinkupSharp.Channels
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketChannelListener<T>));
         private HttpListener listener;
-        private X509Certificate2 certificate;
-        private string prefix;
 
-        public WebSocketChannelListener(string prefix, X509Certificate2 certificate = null)
+        public string Endpoint { get; set; }
+        public X509Certificate2 Certificate { get; set; }
+
+        public WebSocketChannelListener()
         {
-            this.prefix = prefix;
-            this.certificate = certificate;
         }
 
         #region Methods
 
         public void Start()
         {
+            if (string.IsNullOrEmpty(Endpoint)) return;
             if (listener != null) Stop();
-            listener = new HttpListener(certificate);
-            listener.Prefixes.Add(prefix);
+            listener = new HttpListener(Certificate);
+            var endpoint = Endpoint.Replace("0.0.0.0", "+");
+            endpoint = endpoint.Replace("wss://", "https://");
+            endpoint = endpoint.Replace("ws://", "http://");
+            listener.Prefixes.Add(endpoint);
             listener.OnContext = x => ProcessRequest(x);
             listener.Start();
         }

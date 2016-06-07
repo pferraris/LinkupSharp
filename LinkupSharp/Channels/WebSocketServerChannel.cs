@@ -31,6 +31,7 @@ using LinkupSharp.Serializers;
 using log4net;
 using SocketHttpListener;
 using System;
+using System.Security.Cryptography.X509Certificates;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -43,6 +44,9 @@ namespace LinkupSharp.Channels
 
         private WebSocket socket;
         private IPacketSerializer serializer;
+
+        public string Endpoint { get; set; }
+        public X509Certificate2 Certificate { get; set; }
 
         internal WebSocketServerChannel(WebSocket socket)
         {

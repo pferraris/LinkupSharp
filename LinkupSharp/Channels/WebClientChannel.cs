@@ -52,31 +52,29 @@ namespace LinkupSharp.Channels
         private int poolingTime;
         private Timer inactivityTimer;
         private int inactivityTime;
-        private string uri;
-        private X509Certificate2 certificate;
-
         internal string Id { get; private set; }
+
+        public string Endpoint { get; set; }
+        public X509Certificate2 Certificate { get; set; }
 
         static WebClientChannel()
         {
             ServicePointManager.DefaultConnectionLimit = int.MaxValue;
         }
 
-        internal WebClientChannel(string id, bool serverSide)
+        internal WebClientChannel(string id)
         {
             Id = id;
-            this.serverSide = true;
+            serverSide = true;
             serializer = new T();
             inactivityTime = 5000;
             inactivityTimer = new Timer(state => Close().Wait(), null, inactivityTime, Timeout.Infinite);
             pending = new Queue<Packet>();
         }
 
-        public WebClientChannel(string uri, X509Certificate2 certificate = null)
+        public WebClientChannel()
         {
             WebRequest.DefaultWebProxy.Credentials = CredentialCache.DefaultNetworkCredentials;
-            this.uri = uri;
-            this.certificate = certificate;
             ServicePointManager.ServerCertificateValidationCallback = CertificateValidation;
             Id = Guid.NewGuid().ToString();
             serverSide = false;
@@ -89,7 +87,7 @@ namespace LinkupSharp.Channels
 
         public async Task Open()
         {
-            if (!serverSide)
+            if (!serverSide && !string.IsNullOrEmpty(Endpoint))
                 await Task.Factory.StartNew(() =>
                 {
                     active = true;
@@ -99,8 +97,8 @@ namespace LinkupSharp.Channels
 
         private bool CertificateValidation(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
-            if (this.certificate == null) return false;
-            return certificate.GetSerialNumberString().Equals(this.certificate.GetSerialNumberString());
+            if (Certificate == null) return false;
+            return certificate.GetSerialNumberString().Equals(Certificate.GetSerialNumberString());
         }
 
         internal void DataReceived(byte[] buffer)
@@ -126,7 +124,7 @@ namespace LinkupSharp.Channels
                     using (var client = new HttpClient())
                     {
                         client.DefaultRequestHeaders.Add("ClientId", Id);
-                        var response = client.GetByteArrayAsync(new Uri(uri)).Result;
+                        var response = client.GetByteArrayAsync(new Uri(Endpoint)).Result;
                         if (response != null && response.Length > 0)
                             DataReceived(response);
                     }
@@ -156,7 +154,7 @@ namespace LinkupSharp.Channels
                     {
                         client.DefaultRequestHeaders.Add("ClientId", Id);
                         var content = new ByteArrayContent(buffer);
-                        var response = await client.PostAsync(uri, content);
+                        var response = await client.PostAsync(Endpoint, content);
                         if (!response.IsSuccessStatusCode)
                             throw new InvalidOperationException($"StatusCode: {response.StatusCode}");
                     }

@@ -99,45 +99,34 @@ namespace LinkupSharp
 
         public void AddListener<T>(string endpoint, X509Certificate2 certificate = null) where T : IPacketSerializer, new()
         {
-            endpoint = endpoint.Replace("+", "0.0.0.0");
-            var uri = new Uri(endpoint);
+            IChannelListener listener = null;
+            var uri = new Uri(endpoint.Replace("+", "0.0.0.0"));
             switch (uri.Scheme.ToLower())
             {
                 case "tcp":
                 case "ssl":
-                    IPAddress address;
-                    if ("tcp".Equals(uri.Scheme.ToLower())) certificate = null;
-                    if (IPAddress.TryParse(uri.Host, out address))
-                        AddListener(new TcpChannelListener<T>(uri.Port, address, certificate));
-                    else
-                    {
-                        try
-                        {
-                            IPAddress[] addressList = Dns.GetHostAddresses(uri.Host);
-                            foreach (var item in addressList)
-                                AddListener(new TcpChannelListener<T>(uri.Port, item, certificate));
-                        }
-                        catch
-                        {
-                            AddListener(new TcpChannelListener<T>(uri.Port, certificate));
-                        }
-                    }
+                    listener = new TcpChannelListener<T>();
+                    listener.Endpoint = endpoint;
+                    if ("ssl".Equals(uri.Scheme.ToLower()))
+                        listener.Certificate = certificate;
                     break;
                 case "http":
                 case "https":
-                    if ("http".Equals(uri.Scheme.ToLower())) certificate = null;
-                    endpoint = endpoint.Replace("0.0.0.0", "+");
-                    AddListener(new WebChannelListener<T>(endpoint, certificate));
+                    listener = new WebChannelListener<T>();
+                    listener.Endpoint = endpoint;
+                    if ("https".Equals(uri.Scheme.ToLower()))
+                        listener.Certificate = certificate;
                     break;
                 case "ws":
                 case "wss":
-                    if ("ws".Equals(uri.Scheme.ToLower())) certificate = null;
-                    endpoint = endpoint.Replace("0.0.0.0", "+");
-                    endpoint = endpoint.Replace("wss://", "https://");
-                    endpoint = endpoint.Replace("ws://", "http://");
-                    AddListener(new WebSocketChannelListener<T>(endpoint, certificate));
+                    listener = new WebSocketChannelListener<T>();
+                    listener.Endpoint = endpoint;
+                    if ("wss".Equals(uri.Scheme.ToLower()))
+                        listener.Certificate = certificate;
                     break;
             }
+            if (listener != null)
+                AddListener(listener);
         }
 
         public void RemoveListener(IChannelListener listener)

@@ -28,6 +28,7 @@
 #endregion License
 
 using System;
+using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
@@ -36,6 +37,8 @@ namespace LinkupSharp.Channels
     {
         event EventHandler<PacketEventArgs> PacketReceived;
         event EventHandler<EventArgs> Closed;
+        string Endpoint { get; set; }
+        X509Certificate2 Certificate { get; set; }
         Task Open();
         Task Close();
         Task Send(Packet packet);

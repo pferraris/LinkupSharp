@@ -49,13 +49,12 @@ namespace LinkupSharp.Channels
         private IPacketSerializer serializer;
         private Task readingTask;
         private CancellationTokenSource cancel;
-        private Uri url;
-        private X509Certificate2 certificate;
 
-        public WebSocketClientChannel(string url, X509Certificate2 certificate = null)
+        public string Endpoint { get; set; }
+        public X509Certificate2 Certificate { get; set; }
+
+        public WebSocketClientChannel()
         {
-            this.url = new Uri(url);
-            this.certificate = certificate;
             ServicePointManager.ServerCertificateValidationCallback = CertificateValidation;
         }
 
@@ -63,8 +62,9 @@ namespace LinkupSharp.Channels
 
         public async Task Open()
         {
+            if (string.IsNullOrEmpty(Endpoint)) return;
             socket = new ClientWebSocket();
-            await socket.ConnectAsync(url, CancellationToken.None);
+            await socket.ConnectAsync(new Uri(Endpoint), CancellationToken.None);
             serializer = new TokenizedPacketSerializer<T>(token);
             cancel = new CancellationTokenSource();
             readingTask = Task.Factory.StartNew(Read);
@@ -72,8 +72,8 @@ namespace LinkupSharp.Channels
 
         private bool CertificateValidation(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
-            if (this.certificate == null) return false;
-            return certificate.GetSerialNumberString().Equals(this.certificate.GetSerialNumberString());
+            if (Certificate == null) return false;
+            return certificate.GetSerialNumberString().Equals(Certificate.GetSerialNumberString());
         }
 
         private void Read()

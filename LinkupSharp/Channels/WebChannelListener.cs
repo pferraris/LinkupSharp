@@ -43,25 +43,25 @@ namespace LinkupSharp.Channels
         private static readonly ILog log = LogManager.GetLogger(typeof(WebChannelListener<T>));
 
         private HttpListener listener;
-        private X509Certificate2 certificate;
         private Dictionary<string, WebClientChannel<T>> connections;
-        private string prefix;
 
+        public string Endpoint { get; set; }
+        public X509Certificate2 Certificate { get; set; }
 
-        public WebChannelListener(string prefix, X509Certificate2 certificate = null)
+        public WebChannelListener()
         {
-            this.prefix = prefix;
-            this.certificate = certificate;
         }
 
         #region Methods
 
         public void Start()
         {
+            if (string.IsNullOrEmpty(Endpoint)) return;
             if (listener != null) Stop();
             connections = new Dictionary<string, WebClientChannel<T>>();
-            listener = new HttpListener(certificate);
-            listener.Prefixes.Add(prefix);
+            listener = new HttpListener(Certificate);
+            var endpoint = Endpoint.Replace("0.0.0.0", "+");
+            listener.Prefixes.Add(endpoint);
             listener.OnContext = x => Task.Factory.StartNew(() => ProcessRequest(x));
             listener.Start();
         }
@@ -82,7 +82,7 @@ namespace LinkupSharp.Channels
                 lock (connections)
                     if (!connections.ContainsKey(id))
                     {
-                        var client = new WebClientChannel<T>(id, true);
+                        var client = new WebClientChannel<T>(id);
                         client.Closed += client_Closed;
                         connections.Add(id, client);
                         OnClientConnected(client);

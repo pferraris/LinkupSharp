@@ -2,64 +2,61 @@
 
 LinkupSharp es una plataforma de comunicación bidireccional de aplicaciones, diseñada para ser cómodamente extensible y flexible.
 
-Se está trabajando en una implementación JavaScript con AngularJS, para conectar páginas web: [ngLinkup](https://github.com/pferraris/ngLinkup)
+Agregalo a tu proyecto directamente desde [NuGet](https://www.nuget.org/packages/LinkupSharp).
+
+Se está trabajando en una implementación cliente para JavaScript compatible con CommonJS, para conectar páginas web y servicios Node.JS: [LinkupJS](https://github.com/pferraris/LinkupJS)
 
 ## ConnectionManager ##
-Es el núcleo de la librería se encarga de esperar conexiones a través de distintos canales, gestionar las conexiones cliente, y gestionar el intercambio de paquetes entre ellos.
+
+Utilizado para crear un objeto servidor. Se encarga de esperar conexiones pudiendo configurar distintos canales, gestionar las conexiones de clientes, y gestionar el intercambio de paquetes entre ellos. Además, soporta la utilización de módulos que son componentes a los cuales se los puede suscribir a determinados tipos de paquetes para manejar una determinada funcionalidad.
 
 ### Canales de comunicación ###
-Se pueden configurar distintos canales en los cuales esperar conexiones entrantes a través de los métodos:
 
-- `ConnectionManager.AddListener(IChannelListener)`
-- `ConnectionManager.RemoveListener(IChannelListener)`
+Existen dos interfaces que es necesario implementar para definir un canal:
+- `IChannelListener`: Utilizada para esperar conexiones entrantes y lanzar el evento correspondiente al ConnectionManager.
+- `IClientChannel`: Utilizada para la manipulación de cada uno de los extremos de la conexión.
 
-Los distintos IChannelListeners configurados se pueden visualizar a través de la colección:
-
-- `ConnectionManager.Listeners`
+El ConnectionManager posee una lista de `IChannelListener`, la cual se puede consultar desde la propiedad `Listeners`.
+También posee métodos para agregar y remover IChannelListener: `AddListener` y `RemoveListener` respectivamente.
 
 La implementaciones de IChannelListener incluidas en el core son:
+- `TcpChannelListener` para comunicaciones TCP estándar o SSL.
+- `WebChannelListener` que simula bidireccionalidad a través de requests HTTP/HTTPS (GET y POST).
+- `WebSocketChannelListener` para comunicaciones mediante WebSockets, soportando protocolo ws y wss.
 
-- `TcpChannelListener` para comunicaciones TCP estándar.
-- `SslChannelListener` para comunicaciones TCP/SSL mediante un certificado.
-- `WebChannelListener` que simula bidireccionalidad a través de HTTP requests GET y POST.
-- `WebSocketChannelListener` para comunicaciones mediante WebSockets.
-
-Además se planea realizar una implementación experimental que funcione a través de POP3/SMTP llamada `EmailChannelListener`.
+El objetivo de IChannelListener es la de reportar al ConnectionManager cada vez que un cliente se conecta a través de un evento, entregando un IClientChannel.
 
 Cada una de las implementaciones de IChannelListener está acompañada de una implementación de IClientChannel que representa cada uno de los extremos conectados.
-El objetivo de IChannelListener es la de reportar al ConnectionManager cada vez que un cliente se conecta a través de un evento, entregando un IClientChannel.
-Así tenemos las implementaciones:
+Por lo tanto, en el core contamos con las siguientes implementaciones:
 
 - `TcpClientChannel`
-- `SslClientChannel`
 - `WebClientChannel`
-- `WebSocketClientChannel`
+- `WebSocketClientChannel` / `WebSocketServerChannel`
 
 ### Clientes conectados ###
 
-El ConnectionManager encapsula cada IClientChannel recibido en una ClientConnection que representa la sesión cliente.
-Lo primero que debe ocurrir es que la ClientConnection se autentifique para ser incluida en la colección de clientes:
+El ConnectionManager encapsula cada IClientChannel recibido en una ClientConnection que representa al cliente.
+Las ClientConnection podrán autentificarse, realizando un SignIn, esto creará una nueva Session asignándoles un Token.
+Al autenticarse, la ClientConnection será incluida en la lista de clientes:
 
 - `ConnectionManager.Clients`
 
-Hasta que esto ocurra, se mantendra en un estado pendiente de autentificación por un tiempo determinado (`ConnectionManager.AuthenticationTimeOut`) y no podrá enviar ni recibir paquetes.
+Si el cliente realiza un SignOut se eliminará la Session creada con anterioridad. Mientras tanto podrá utilizar el Token generado para restaurar la sesión en futuras conexiones mediante RestoreSession.
 
-Cuando un cliente se desconecta, el mismo se mantiene almacenado por un tiempo determinado (`ConnectionManager.InactivityTimeOut`), y es considerado como inactivo. Si el mismo se reconecta antes de ese período de tiempo, se restaurará la ClientConnection y volverá a un estado activo, en caso contrario se desechará y figurará como desconectado.
 
 ### Autenticadores de clientes ###
-Se pueden configurar varios autenticadores de clientes formando una cadena de responsabilidad, mediante los métodos:
+Se pueden configurar varios autenticadores los cuales intentarán autentificar a los clientes en el órden en que se agtreguen. Los métodos para agregar y quitar los mismos son:
 
 - `ConnectionManager.AddAuthenticator(IAuthenticator)`
 - `ConnectionManager.RemoveAuthenticator(IAuthenticator)`
 
-Asimismo se pueden visualizar los mismos en la colección:
+Asimismo se puede obtener la lista mediante la propiedad:
 
 - `ConnectionManager.Authenticators`
 
-Cuando un ClientConnection envía su información de autenticación (`Credentials`), el mismo pasa por todos los autenticadores hasta que alguno lo considera válido, le setea un `AuthenticationContext`, y le informa al ConnectionManager que es un cliente válido.
-En ese momento el ClientConnection lo comienza a considerar como un cliente conectado para la recepción y envío de paquetes.
+Cuando un ClientConnection envía su información de autenticación (`SignIn`), el mismo pasa por todos los autenticadores hasta que alguno lo considera válido, crea una nueva `Session` asignándole un Token, y le informa al ConnectionManager que es un cliente válido.
+En ese momento el ClientConnection lo comienza a considerar como un cliente conectado para los broadcast.
 
-La implementación que viene por defecto es `AnonymousAuthentication` que solo valida que `Credentials` no sea nulo, pero no valida passwords.
-`Credentials` es una implementación base para cualquier extensión que se quiera realizar, que solo posee la propiedad Id para tener la identificación del cliente.
-Finalmente la implementación base `AuthenticationContext` solo contiene el Id del cliente.
-
+La implementación que viene por defecto es `AnonymousAuthentication` que solo valida que `SignIn` no sea nulo, pero no valida passwords.
+`SignIn` es una implementación base para cualquier extensión que se quiera realizar, que solo posee la propiedad Id para tener la identificación del cliente.
+Finalmente la implementación base `Session` solo contiene el Id del cliente y su Token, pero puede ser extendida para contener más datos relacionados con la sesión del cliente.

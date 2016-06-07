@@ -41,7 +41,7 @@ namespace LinkupSharp
 {
     public class ClientConnection
     {
-        internal IClientChannel Channel { get; private set; }
+        public IClientChannel Channel { get; private set; }
         public Session Session { get; private set; }
         public Id Id { get { return Session != null ? Session.Id : null; } }
         public bool IsConnected { get; private set; }
@@ -193,22 +193,34 @@ namespace LinkupSharp
 
         public void Connect<T>(string endpoint, X509Certificate2 certificate = null) where T : IPacketSerializer, new()
         {
+            IClientChannel channel = null;
             var uri = new Uri(endpoint);
             switch (uri.Scheme.ToLower())
             {
                 case "tcp":
                 case "ssl":
-                    Connect(new TcpClientChannel<T>(uri.Host, uri.Port, certificate));
+                    channel = new TcpClientChannel<T>();
+                    channel.Endpoint = endpoint;
+                    if ("ssl".Equals(uri.Scheme.ToLower()))
+                        channel.Certificate = certificate;
                     break;
                 case "http":
                 case "https":
-                    Connect(new WebClientChannel<T>(uri.AbsoluteUri, certificate));
+                    channel = new WebClientChannel<T>();
+                    channel.Endpoint = endpoint;
+                    if ("https".Equals(uri.Scheme.ToLower()))
+                        channel.Certificate = certificate;
                     break;
                 case "ws":
                 case "wss":
-                    Connect(new WebSocketClientChannel<T>(uri.AbsoluteUri, certificate));
+                    channel = new WebSocketClientChannel<T>();
+                    channel.Endpoint = endpoint;
+                    if ("wss".Equals(uri.Scheme.ToLower()))
+                        channel.Certificate = certificate;
                     break;
             }
+            if (channel != null)
+                Connect(channel);
         }
 
         public void Connect(IClientChannel channel)

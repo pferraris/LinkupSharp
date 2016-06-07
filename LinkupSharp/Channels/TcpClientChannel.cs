@@ -51,22 +51,20 @@ namespace LinkupSharp.Channels
         private IPacketSerializer serializer;
         private Stream stream;
         private bool serverSide;
-        private string host;
-        private int port;
-        private X509Certificate2 certificate;
 
-        public TcpClientChannel(string host, int port, X509Certificate2 certificate = null)
+        public string Endpoint { get; set; }
+        public X509Certificate2 Certificate { get; set; }
+
+        public TcpClientChannel()
         {
-            this.host = host;
-            this.port = port;
-            this.certificate = certificate;
             serverSide = false;
             serializer = new TokenizedPacketSerializer<T>(token);
         }
 
         internal TcpClientChannel(TcpClient socket, X509Certificate2 certificate)
         {
-            this.certificate = certificate;
+            Endpoint = socket.Client.RemoteEndPoint.ToString();
+            Certificate = certificate;
             serverSide = true;
             serializer = new TokenizedPacketSerializer<T>(token);
             SetSocket(socket);
@@ -76,10 +74,11 @@ namespace LinkupSharp.Channels
 
         public async Task Open()
         {
-            if (!serverSide)
+            if (!serverSide && !string.IsNullOrEmpty(Endpoint))
                 await Task.Factory.StartNew(() =>
                 {
-                    SetSocket(new TcpClient(host, port));
+                    var uri = new Uri(Endpoint);
+                    SetSocket(new TcpClient(uri.Host, uri.Port));
                 });
         }
 
@@ -93,7 +92,7 @@ namespace LinkupSharp.Channels
 
         private Stream GetStream()
         {
-            if (certificate == null)
+            if (Certificate == null)
             {
                 return socket.GetStream();
             }
@@ -103,7 +102,7 @@ namespace LinkupSharp.Channels
                 if (serverSide)
                 {
                     stream = new SslStream(socket.GetStream(), false);
-                    stream.AuthenticateAsServer(certificate);
+                    stream.AuthenticateAsServer(Certificate);
                 }
                 else
                 {
@@ -119,8 +118,8 @@ namespace LinkupSharp.Channels
 
         private bool CertificateValidation(object sender, X509Certificate certificate, X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
-            if (this.certificate == null) return false;
-            return certificate.GetSerialNumberString().Equals(this.certificate.GetSerialNumberString());
+            if (Certificate == null) return false;
+            return certificate.GetSerialNumberString().Equals(Certificate.GetSerialNumberString());
         }
 
         private void Read()
