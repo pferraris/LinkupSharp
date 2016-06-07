@@ -29,6 +29,7 @@
 
 using log4net;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using System;
 using System.Text;
 
@@ -45,6 +46,7 @@ namespace LinkupSharp.Serializers
             {
                 NullValueHandling = NullValueHandling.Ignore,
                 Formatting = Formatting.None,
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
             };
         }
 

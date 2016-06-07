@@ -10,7 +10,7 @@ namespace LinkupSharp.Management.Controllers
         [Route("")]
         public IHttpActionResult Get()
         {
-            return Ok(Module.Manager.Clients.Select(x => new
+            return Ok(Management.Server.Clients.Select(x => new
             {
                 Session = x.Session,
                 Channel = new
@@ -20,6 +20,32 @@ namespace LinkupSharp.Management.Controllers
                     Certificate = x.Channel.Certificate?.Subject
                 }
             }).ToArray());
+        }
+
+        [HttpPost]
+        [Route("{id}")]
+        public IHttpActionResult Send(string id, [FromBody]Packet content)
+        {
+            var client = Management.Server.Clients.FirstOrDefault(x => x.Id.Equals((Id)id));
+            if (client != null)
+            {
+                client.Send(content);
+                return Ok();
+            }
+            return NotFound();
+        }
+
+        [HttpDelete]
+        [Route("{id}")]
+        public IHttpActionResult Disconnect(string id)
+        {
+            var client = Management.Server.Clients.FirstOrDefault(x => x.Id.Equals((Id)id));
+            if (client != null)
+            {
+                client.Disconnect();
+                return Ok();
+            }
+            return NotFound();
         }
     }
 }

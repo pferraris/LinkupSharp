@@ -29,6 +29,7 @@
 
 using log4net;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Serialization;
 using System;
 using System.Collections.Generic;
 
@@ -37,6 +38,17 @@ namespace LinkupSharp
     public class Packet
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(Packet));
+        private static readonly JsonSerializerSettings settings;
+
+        static Packet()
+        {
+            settings = new JsonSerializerSettings
+            {
+                Formatting = Formatting.None,
+                NullValueHandling = NullValueHandling.Ignore,
+                ContractResolver = new CamelCasePropertyNamesContractResolver()
+            };
+        }
 
         public Id Sender { get; set; }
         public Id Recipient { get; set; }

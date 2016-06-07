@@ -11,7 +11,7 @@ namespace LinkupSharp.Management.Controllers
         [Route("")]
         public IHttpActionResult Get()
         {
-            return Ok(Module.Manager.Modules.Select(x => new
+            return Ok(Management.Server.Modules.Select(x => new
             {
                 Type = x.GetType().Name.Replace("`1", "")
             }).ToArray());

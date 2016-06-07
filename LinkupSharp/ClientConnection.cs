@@ -236,7 +236,10 @@ namespace LinkupSharp
 
         public void Disconnect()
         {
-            Disconnect(Reasons.ClientRequest);
+            if (serverSide)
+                Disconnect(Reasons.ServerRequest);
+            else
+                Disconnect(Reasons.ClientRequest);
         }
 
         internal void Disconnect(Reasons reason, bool sendDisconnected = true)

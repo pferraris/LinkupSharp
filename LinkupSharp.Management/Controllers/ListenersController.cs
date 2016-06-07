@@ -11,7 +11,7 @@ namespace LinkupSharp.Management.Controllers
         [Route("")]
         public IHttpActionResult Get()
         {
-            return Ok(Module.Manager.Listeners.Select(x => new
+            return Ok(Management.Server.Listeners.Select(x => new
             {
                 Type = x.GetType().Name.Replace("`1", ""),
                 Endpoint = x.Endpoint,

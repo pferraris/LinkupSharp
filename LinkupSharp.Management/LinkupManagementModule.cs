@@ -13,7 +13,7 @@ namespace LinkupSharp.Management
         private string endpoint;
         private IDisposable host;
 
-        internal ConnectionManager Manager { get; private set; }
+        internal ConnectionManager Server { get; private set; }
 
         public LinkupManagementModule(string endpoint)
         {
@@ -33,17 +33,17 @@ namespace LinkupSharp.Management
         public void OnAdded(ConnectionManager manager)
         {
             OnRemoved(manager);
-            Manager = manager;
-            Manager.ClientConnected += Manager_ClientConnected;
-            Manager.ClientDisconnected += Manager_ClientDisconnected;
+            Server = manager;
+            Server.ClientConnected += Manager_ClientConnected;
+            Server.ClientDisconnected += Manager_ClientDisconnected;
         }
 
         public void OnRemoved(ConnectionManager manager)
         {
-            if (Manager != null)
+            if (Server != null)
             {
-                Manager.ClientConnected -= Manager_ClientConnected;
-                Manager.ClientDisconnected -= Manager_ClientDisconnected;
+                Server.ClientConnected -= Manager_ClientConnected;
+                Server.ClientDisconnected -= Manager_ClientDisconnected;
             }
         }
 
