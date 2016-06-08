@@ -41,9 +41,9 @@ using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
 {
-    public class WebClientChannel<T> : IClientChannel where T : IPacketSerializer, new()
+    public class WebClientChannel : IClientChannel
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(WebClientChannel<T>));
+        private static readonly ILog log = LogManager.GetLogger(typeof(WebClientChannel));
         private IPacketSerializer serializer;
         private Task readingTask;
         private bool active;
@@ -66,7 +66,6 @@ namespace LinkupSharp.Channels
         {
             Id = id;
             serverSide = true;
-            serializer = new T();
             inactivityTime = 5000;
             inactivityTimer = new Timer(state => Close().Wait(), null, inactivityTime, Timeout.Infinite);
             pending = new Queue<Packet>();
@@ -78,15 +77,21 @@ namespace LinkupSharp.Channels
             ServicePointManager.ServerCertificateValidationCallback = CertificateValidation;
             Id = Guid.NewGuid().ToString();
             serverSide = false;
-            serializer = new T();
             poolingTime = 1000;
             inactivityTime = 5000;
         }
 
         #region Methods
 
+        public void SetSerializer(IPacketSerializer serializer)
+        {
+            this.serializer = serializer;
+        }
+
         public async Task Open()
         {
+            if (serializer == null)
+                SetSerializer(new JsonPacketSerializer());
             if (!serverSide && !string.IsNullOrEmpty(Endpoint))
                 await Task.Factory.StartNew(() =>
                 {

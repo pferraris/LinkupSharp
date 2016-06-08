@@ -40,9 +40,9 @@ using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
 {
-    public class TcpClientChannel<T> : IClientChannel where T : IPacketSerializer, new()
+    public class TcpClientChannel : IClientChannel
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(TcpClientChannel<T>));
+        private static readonly ILog log = LogManager.GetLogger(typeof(TcpClientChannel));
         private static readonly byte[] token = new byte[] { 0x0007, 0x000C, 0x000B };
 
         private Task readingTask;
@@ -58,7 +58,6 @@ namespace LinkupSharp.Channels
         public TcpClientChannel()
         {
             serverSide = false;
-            serializer = new TokenizedPacketSerializer<T>(token);
         }
 
         internal TcpClientChannel(TcpClient socket, X509Certificate2 certificate)
@@ -66,14 +65,20 @@ namespace LinkupSharp.Channels
             Endpoint = socket.Client.RemoteEndPoint.ToString();
             Certificate = certificate;
             serverSide = true;
-            serializer = new TokenizedPacketSerializer<T>(token);
             SetSocket(socket);
         }
 
         #region Methods
 
+        public void SetSerializer(IPacketSerializer serializer)
+        {
+            this.serializer = new TokenizedPacketSerializer(token, serializer);
+        }
+
         public async Task Open()
         {
+            if (serializer == null)
+                SetSerializer(new JsonPacketSerializer());
             if (!serverSide && !string.IsNullOrEmpty(Endpoint))
                 await Task.Factory.StartNew(() =>
                 {

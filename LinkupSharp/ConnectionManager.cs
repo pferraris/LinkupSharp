@@ -105,28 +105,25 @@ namespace LinkupSharp
             {
                 case "tcp":
                 case "ssl":
-                    listener = new TcpChannelListener<T>();
-                    listener.Endpoint = endpoint;
-                    if ("ssl".Equals(uri.Scheme.ToLower()))
-                        listener.Certificate = certificate;
+                    listener = new TcpChannelListener();
                     break;
                 case "http":
                 case "https":
-                    listener = new WebChannelListener<T>();
-                    listener.Endpoint = endpoint;
-                    if ("https".Equals(uri.Scheme.ToLower()))
-                        listener.Certificate = certificate;
+                    listener = new WebChannelListener();
                     break;
                 case "ws":
                 case "wss":
-                    listener = new WebSocketChannelListener<T>();
-                    listener.Endpoint = endpoint;
-                    if ("wss".Equals(uri.Scheme.ToLower()))
-                        listener.Certificate = certificate;
+                    listener = new WebSocketChannelListener();
                     break;
             }
             if (listener != null)
+            {
+                if (new string[] { "ssl", "https", "wss" }.Contains(uri.Scheme.ToLower()))
+                    listener.Certificate = certificate;
+                listener.SetSerializer(new T());
+                listener.Endpoint = endpoint;
                 AddListener(listener);
+            }
         }
 
         public void RemoveListener(IChannelListener listener)

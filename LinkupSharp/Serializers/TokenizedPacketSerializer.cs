@@ -34,17 +34,17 @@ using System.Linq;
 
 namespace LinkupSharp.Serializers
 {
-    public class TokenizedPacketSerializer<T> : IPacketSerializer where T : IPacketSerializer, new()
+    public class TokenizedPacketSerializer : IPacketSerializer
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(TokenizedPacketSerializer<T>));
-        private T internalSerializer;
+        private static readonly ILog log = LogManager.GetLogger(typeof(TokenizedPacketSerializer));
+        private IPacketSerializer internalSerializer;
         private List<byte> buffer;
         private byte[] token;
 
-        public TokenizedPacketSerializer(byte[] token)
+        public TokenizedPacketSerializer(byte[] token, IPacketSerializer internalSerializer)
         {
             this.token = token;
-            internalSerializer = new T();
+            this.internalSerializer = internalSerializer;
             buffer = new List<byte>();
         }
 

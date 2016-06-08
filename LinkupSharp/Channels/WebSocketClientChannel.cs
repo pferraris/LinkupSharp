@@ -40,9 +40,9 @@ using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
 {
-    public class WebSocketClientChannel<T> : IClientChannel where T : IPacketSerializer, new()
+    public class WebSocketClientChannel : IClientChannel
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketClientChannel<T>));
+        private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketClientChannel));
         private static readonly byte[] token = new byte[] { 0x0007, 0x000C, 0x000B };
 
         private ClientWebSocket socket;
@@ -60,12 +60,18 @@ namespace LinkupSharp.Channels
 
         #region Methods
 
+        public void SetSerializer(IPacketSerializer serializer)
+        {
+            this.serializer = new TokenizedPacketSerializer(token, serializer);
+        }
+
         public async Task Open()
         {
+            if (serializer == null)
+                SetSerializer(new JsonPacketSerializer());
             if (string.IsNullOrEmpty(Endpoint)) return;
             socket = new ClientWebSocket();
             await socket.ConnectAsync(new Uri(Endpoint), CancellationToken.None);
-            serializer = new TokenizedPacketSerializer<T>(token);
             cancel = new CancellationTokenSource();
             readingTask = Task.Factory.StartNew(Read);
         }

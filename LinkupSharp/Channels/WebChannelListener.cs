@@ -38,12 +38,13 @@ using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
 {
-    public class WebChannelListener<T> : IChannelListener where T : IPacketSerializer, new()
+    public class WebChannelListener : IChannelListener
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(WebChannelListener<T>));
+        private static readonly ILog log = LogManager.GetLogger(typeof(WebChannelListener));
 
         private HttpListener listener;
-        private Dictionary<string, WebClientChannel<T>> connections;
+        private Dictionary<string, WebClientChannel> connections;
+        private IPacketSerializer serializer;
 
         public string Endpoint { get; set; }
         public X509Certificate2 Certificate { get; set; }
@@ -54,11 +55,18 @@ namespace LinkupSharp.Channels
 
         #region Methods
 
+        public void SetSerializer(IPacketSerializer serializer)
+        {
+            this.serializer = serializer;
+        }
+
         public void Start()
         {
+            if (serializer == null)
+                serializer = new JsonPacketSerializer();
             if (string.IsNullOrEmpty(Endpoint)) return;
             if (listener != null) Stop();
-            connections = new Dictionary<string, WebClientChannel<T>>();
+            connections = new Dictionary<string, WebClientChannel>();
             listener = new HttpListener(Certificate);
             var endpoint = Endpoint.Replace("0.0.0.0", "+");
             listener.Prefixes.Add(endpoint);
@@ -82,7 +90,8 @@ namespace LinkupSharp.Channels
                 lock (connections)
                     if (!connections.ContainsKey(id))
                     {
-                        var client = new WebClientChannel<T>(id);
+                        var client = new WebClientChannel(id);
+                        client.SetSerializer(serializer);
                         client.Closed += client_Closed;
                         connections.Add(id, client);
                         OnClientConnected(client);
@@ -125,7 +134,7 @@ namespace LinkupSharp.Channels
 
         void client_Closed(object sender, EventArgs e)
         {
-            var client = sender as WebClientChannel<T>;
+            var client = sender as WebClientChannel;
             if (connections.ContainsKey(client.Id))
                 connections.Remove(client.Id);
         }

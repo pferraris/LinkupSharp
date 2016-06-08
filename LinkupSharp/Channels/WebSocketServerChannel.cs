@@ -32,14 +32,13 @@ using log4net;
 using SocketHttpListener;
 using System;
 using System.Security.Cryptography.X509Certificates;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
 {
-    internal class WebSocketServerChannel<T> : IClientChannel where T : IPacketSerializer, new()
+    internal class WebSocketServerChannel : IClientChannel
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketServerChannel<T>));
+        private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketServerChannel));
         private static readonly byte[] token = new byte[] { 0x0007, 0x000C, 0x000B };
 
         private WebSocket socket;
@@ -54,7 +53,6 @@ namespace LinkupSharp.Channels
             socket.OnOpen += Socket_OnOpen;
             socket.OnClose += Socket_OnClose;
             socket.OnMessage += Socket_OnMessage;
-            serializer = new TokenizedPacketSerializer<T>(token);
             socket.ConnectAsServer();
         }
 
@@ -96,8 +94,15 @@ namespace LinkupSharp.Channels
 
         #region Methods
 
+        public void SetSerializer(IPacketSerializer serializer)
+        {
+            this.serializer = new TokenizedPacketSerializer(token, serializer);
+        }
+
         public async Task Open()
         {
+            if (serializer == null)
+                SetSerializer(new JsonPacketSerializer());
             await Task.FromResult<object>(null);
         }
 

@@ -27,6 +27,7 @@
 */
 #endregion License
 
+using LinkupSharp.Serializers;
 using System;
 using System.Security.Cryptography.X509Certificates;
 
@@ -37,6 +38,7 @@ namespace LinkupSharp.Channels
         event EventHandler<ClientChannelEventArgs> ClientConnected;
         string Endpoint { get; set; }
         X509Certificate2 Certificate { get; set; }
+        void SetSerializer(IPacketSerializer serializer);
         void Start();
         void Stop();
     }

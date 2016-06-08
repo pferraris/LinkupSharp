@@ -36,10 +36,11 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace LinkupSharp.Channels
 {
-    public class WebSocketChannelListener<T> : IChannelListener where T : IPacketSerializer, new()
+    public class WebSocketChannelListener : IChannelListener
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketChannelListener<T>));
+        private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketChannelListener));
         private HttpListener listener;
+        private IPacketSerializer serializer;
 
         public string Endpoint { get; set; }
         public X509Certificate2 Certificate { get; set; }
@@ -50,8 +51,15 @@ namespace LinkupSharp.Channels
 
         #region Methods
 
+        public void SetSerializer(IPacketSerializer serializer)
+        {
+            this.serializer = serializer;
+        }
+
         public void Start()
         {
+            if (serializer == null)
+                serializer = new JsonPacketSerializer();
             if (string.IsNullOrEmpty(Endpoint)) return;
             if (listener != null) Stop();
             listener = new HttpListener(Certificate);
@@ -80,7 +88,9 @@ namespace LinkupSharp.Channels
                 {
                     WebSocketContext webSocketContext = null;
                     webSocketContext = listenerContext.AcceptWebSocket(null);
-                    OnClientConnected(new WebSocketServerChannel<T>(webSocketContext.WebSocket));
+                    var channel = new WebSocketServerChannel(webSocketContext.WebSocket);
+                    channel.SetSerializer(serializer);
+                    OnClientConnected(channel);
                 }
                 else
                 {

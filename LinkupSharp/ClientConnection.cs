@@ -34,6 +34,7 @@ using LinkupSharp.Security.Authentication;
 using LinkupSharp.Serializers;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
 
@@ -199,28 +200,25 @@ namespace LinkupSharp
             {
                 case "tcp":
                 case "ssl":
-                    channel = new TcpClientChannel<T>();
-                    channel.Endpoint = endpoint;
-                    if ("ssl".Equals(uri.Scheme.ToLower()))
-                        channel.Certificate = certificate;
+                    channel = new TcpClientChannel();
                     break;
                 case "http":
                 case "https":
-                    channel = new WebClientChannel<T>();
-                    channel.Endpoint = endpoint;
-                    if ("https".Equals(uri.Scheme.ToLower()))
-                        channel.Certificate = certificate;
+                    channel = new WebClientChannel();
                     break;
                 case "ws":
                 case "wss":
-                    channel = new WebSocketClientChannel<T>();
-                    channel.Endpoint = endpoint;
-                    if ("wss".Equals(uri.Scheme.ToLower()))
-                        channel.Certificate = certificate;
+                    channel = new WebSocketClientChannel();
                     break;
             }
             if (channel != null)
+            {
+                if (new string[] { "ssl", "https", "wss" }.Contains(uri.Scheme.ToLower()))
+                    channel.Certificate = certificate;
+                channel.SetSerializer(new T());
+                channel.Endpoint = endpoint;
                 Connect(channel);
+            }
         }
 
         public void Connect(IClientChannel channel)

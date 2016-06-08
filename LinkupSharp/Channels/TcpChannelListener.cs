@@ -39,16 +39,18 @@ using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
 {
-    public class TcpChannelListener<T> : IChannelListener where T : IPacketSerializer, new()
+    public class TcpChannelListener : IChannelListener
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(TcpChannelListener<T>));
+        private static readonly ILog log = LogManager.GetLogger(typeof(TcpChannelListener));
 
         private List<TcpListener> listeners;
         private bool listening;
         private Task listenerTask;
+        private IPacketSerializer serializer;
 
         public string Endpoint { get; set; }
         public X509Certificate2 Certificate { get; set; }
+
 
         public TcpChannelListener()
         {
@@ -57,8 +59,15 @@ namespace LinkupSharp.Channels
 
         #region Methods
 
+        public void SetSerializer(IPacketSerializer serializer)
+        {
+            this.serializer = serializer;
+        }
+
         public void Start()
         {
+            if (serializer == null)
+                serializer = new JsonPacketSerializer();
             if (string.IsNullOrEmpty(Endpoint)) return;
             if (listeners.Count > 0) Stop();
             var endpoint = Endpoint.Replace("+", "0.0.0.0");
@@ -124,7 +133,9 @@ namespace LinkupSharp.Channels
         {
             try
             {
-                return new TcpClientChannel<T>(socket, Certificate);
+                var channel = new TcpClientChannel(socket, Certificate);
+                channel.SetSerializer(serializer);
+                return channel;
             }
             catch (Exception ex)
             {
