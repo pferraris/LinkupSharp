@@ -34,7 +34,7 @@ using System.Linq;
 
 namespace LinkupSharp.Modules
 {
-    public class ClientModule : IClientModule
+    public abstract class ClientModule : IClientModule
     {
 
         #region Implements IClientModule

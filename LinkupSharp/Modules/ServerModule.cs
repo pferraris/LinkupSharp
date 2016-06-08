@@ -35,7 +35,7 @@ using System.Linq;
 
 namespace LinkupSharp.Modules
 {
-    public class ServerModule : IServerModule
+    public abstract class ServerModule : IServerModule
     {
 
         #region Implements IServerPacketInterceptor
