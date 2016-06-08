@@ -1,6 +1,4 @@
-﻿using LinkupSharp.Channels;
-using LinkupSharp.Serializers;
-using System;
+﻿using System;
 using System.Linq;
 using System.Web.Http;
 
@@ -15,7 +13,7 @@ namespace LinkupSharp.Management.Controllers
         {
             return Ok(Management.Server.Listeners.Select(x => new
             {
-                Type = x.GetType().Name.Replace("`1", ""),
+                Extension = ExtensionHelper.GetListener(x.GetType()),
                 Endpoint = x.Endpoint,
                 Certificate = x.Certificate?.Subject
             }).ToArray());
@@ -25,7 +23,7 @@ namespace LinkupSharp.Management.Controllers
         [Route("available")]
         public IHttpActionResult Available()
         {
-            return Ok(DependencyHelper.GetClasses<IChannelListener>().Select(x => x.Name.Replace("`1", "")).ToArray());
+            return Ok(ExtensionHelper.Listeners);
         }
 
         [HttpPost]
@@ -36,11 +34,10 @@ namespace LinkupSharp.Management.Controllers
             {
                 if (Management.Server.Listeners.Any(x => x.Endpoint.Equals(definition.Endpoint, StringComparison.InvariantCultureIgnoreCase)))
                     return BadRequest("Endpoint in use yet");
-                var type = DependencyHelper.GetClasses<IChannelListener>().FirstOrDefault(x => x.Name.Replace("`1", "").Equals(definition.Type, StringComparison.InvariantCultureIgnoreCase));
-                if (type == null)
+                var extension = ExtensionHelper.GetListener(definition.Type);
+                if (extension == null)
                     return BadRequest("Listener type not found");
-                var genericType = type.MakeGenericType(typeof(JsonPacketSerializer));
-                var listener = Activator.CreateInstance(genericType) as IChannelListener;
+                var listener = extension.Create();
                 listener.Endpoint = definition.Endpoint;
                 Management.Server.AddListener(listener);
                 return Ok();

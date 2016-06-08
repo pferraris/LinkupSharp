@@ -13,7 +13,7 @@ namespace LinkupSharp.Management.Controllers
         {
             return Ok(Management.Server.Authenticators.Select(x => new
             {
-                Type = x.GetType().Name.Replace("`1", "")
+                Extension = ExtensionHelper.GetAuthenticator(x.GetType())
             }).ToArray());
         }
 
@@ -21,7 +21,7 @@ namespace LinkupSharp.Management.Controllers
         [Route("available")]
         public IHttpActionResult Available()
         {
-            return Ok(DependencyHelper.GetClasses<IAuthenticator>().Select(x => x.Name.Replace("`1", "")).ToArray());
+            return Ok(ExtensionHelper.Authenticators);
         }
     }
 }

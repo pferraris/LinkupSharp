@@ -15,7 +15,7 @@ namespace LinkupSharp.Management.Controllers
                 Session = x.Session,
                 Channel = new
                 {
-                    Type = x.Channel.GetType().Name.Replace("`1", ""),
+                    Type = x.Channel.GetType().Name,
                     Endpoint = x.Channel.Endpoint,
                     Certificate = x.Channel.Certificate?.Subject
                 }
