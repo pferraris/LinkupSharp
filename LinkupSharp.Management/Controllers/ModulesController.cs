@@ -14,7 +14,7 @@ namespace LinkupSharp.Management.Controllers
             return Ok(Management.Server.Modules.Select(x => new
             {
                 Extension = ExtensionHelper.GetModule(x.GetType())
-            }).ToArray());
+            }).Where(x => x.Extension != null).ToArray());
         }
 
         [HttpGet]
@@ -26,13 +26,13 @@ namespace LinkupSharp.Management.Controllers
 
         [HttpPost]
         [Route("")]
-        public IHttpActionResult Post([FromBody]string typeName)
+        public IHttpActionResult Post([FromBody]ModuleDefinition definition)
         {
             try
             {
-                if (Management.Server.Modules.Any(x => x.GetType().Name.Equals(typeName, StringComparison.InvariantCultureIgnoreCase)))
+                if (Management.Server.Modules.Any(x => x.GetType().Name.Equals(definition.Type, StringComparison.InvariantCultureIgnoreCase)))
                     return BadRequest("Module is added yet");
-                var extension = ExtensionHelper.GetModule(typeName);
+                var extension = ExtensionHelper.GetModule(definition.Type);
                 if (extension == null)
                     return BadRequest("Listener type not found");
                 var module = extension.Create();
@@ -47,11 +47,11 @@ namespace LinkupSharp.Management.Controllers
 
         [HttpDelete]
         [Route("")]
-        public IHttpActionResult Delete([FromBody]string typeName)
+        public IHttpActionResult Delete([FromBody]ModuleDefinition definition)
         {
             try
             {
-                var module = Management.Server.Modules.FirstOrDefault(x => x.GetType().Name.Equals(typeName, StringComparison.InvariantCultureIgnoreCase));
+                var module = Management.Server.Modules.FirstOrDefault(x => x.GetType().Name.Equals(definition.Type, StringComparison.InvariantCultureIgnoreCase));
                 if (module == null)
                     return BadRequest("Module not found");
                 Management.Server.RemoveModule(module);
@@ -61,6 +61,11 @@ namespace LinkupSharp.Management.Controllers
             {
                 return InternalServerError(ex);
             }
+        }
+
+        public class ModuleDefinition
+        {
+            public string Type { get; set; }
         }
     }
 }
