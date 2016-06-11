@@ -37,7 +37,6 @@ using log4net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Net;
 using System.Security.Cryptography.X509Certificates;
 
 namespace LinkupSharp
@@ -55,6 +54,7 @@ namespace LinkupSharp
 
         public ISessionRepository Sessions { get { return sessions; } }
         public IEnumerable<ClientConnection> Clients { get { lock (clients) return clients.Where(x => x.IsAuthenticated).ToArray(); } }
+        public IEnumerable<ClientConnection> Anonymous { get { lock (clients) return clients.Where(x => !x.IsAuthenticated).ToArray(); } }
         public IEnumerable<IChannelListener> Listeners { get { return listeners.ToArray(); } }
         public IEnumerable<IAuthenticator> Authenticators { get { return authenticators.ToArray(); } }
         public IEnumerable<IAuthorizer> Authorizers { get { return authorizers.ToArray(); } }
