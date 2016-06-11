@@ -148,5 +148,20 @@ namespace LinkupSharp.Management
                     type.GetConstructor(Type.EmptyTypes) != null)
                     yield return type;
         }
+
+        public static bool TypeEquals(this object source, string name)
+        {
+            if (name.Contains("."))
+            {
+                if (source.GetType().FullName.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return true;
+            }
+            else
+            {
+                if (source.GetType().Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
+                    return true;
+            }
+            return false;
+        }
     }
 }

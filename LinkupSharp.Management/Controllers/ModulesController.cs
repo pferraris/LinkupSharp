@@ -30,11 +30,11 @@ namespace LinkupSharp.Management.Controllers
         {
             try
             {
-                if (Management.Server.Modules.Any(x => x.GetType().Name.Equals(definition.Type, StringComparison.InvariantCultureIgnoreCase)))
+                if (Management.Server.Modules.Any(x => x.TypeEquals(definition.Type)))
                     return BadRequest("Module is added yet");
                 var extension = ExtensionHelper.GetModule(definition.Type);
                 if (extension == null)
-                    return BadRequest("Listener type not found");
+                    return BadRequest("Module type not found");
                 var module = extension.Create();
                 Management.Server.AddModule(module);
                 return Ok();
@@ -51,7 +51,7 @@ namespace LinkupSharp.Management.Controllers
         {
             try
             {
-                var module = Management.Server.Modules.FirstOrDefault(x => x.GetType().Name.Equals(definition.Type, StringComparison.InvariantCultureIgnoreCase));
+                var module = Management.Server.Modules.FirstOrDefault(x => x.TypeEquals(definition.Type));
                 if (module == null)
                     return BadRequest("Module not found");
                 Management.Server.RemoveModule(module);
