@@ -89,9 +89,16 @@ namespace LinkupSharp
         {
             await Task.Factory.StartNew(() =>
             {
-                connectEvent.Reset();
-                Client.Connect(channel);
-                connectEvent.WaitOne();
+                try
+                {
+                    connectEvent.Reset();
+                    Client.Connect(channel);
+                    connectEvent.WaitOne();
+                }
+                catch
+                {
+                    connectEvent.Set();
+                }
             });
         }
 

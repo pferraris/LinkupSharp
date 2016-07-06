@@ -36,7 +36,6 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
-using System.Threading.Tasks;
 
 namespace LinkupSharp
 {
@@ -228,7 +227,15 @@ namespace LinkupSharp
                 Channel = channel;
                 Channel.PacketReceived += Channel_PacketReceived;
                 Channel.Closed += Channel_Closed;
-                Channel.Open().Wait();
+                try
+                {
+                    Channel.Open().Wait();
+                }
+                catch (Exception ex)
+                {
+                    Channel = null;
+                    throw ex;
+                }
             }
         }
 
