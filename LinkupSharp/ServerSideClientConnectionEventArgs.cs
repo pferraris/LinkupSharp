@@ -29,12 +29,12 @@
 
 namespace LinkupSharp
 {
-    public class ClientConnectionEventArgs
+    public class ServerSideClientConnectionEventArgs
     {
-        public ClientConnection Client { get; private set; }
+        public IServerSideClientConnection Client { get; private set; }
         public Id Id { get; private set; }
 
-        public ClientConnectionEventArgs(ClientConnection client, Id id)
+        public ServerSideClientConnectionEventArgs(IServerSideClientConnection client, Id id)
         {
             Client = client;
             Id = id;

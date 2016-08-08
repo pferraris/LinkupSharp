@@ -44,7 +44,7 @@ namespace LinkupSharp.Modules
 
         public virtual void OnRemoved(ConnectionManager manager) { }
 
-        public bool Process(Packet packet, ClientConnection client, ConnectionManager manager)
+        public bool Process(Packet packet, IServerSideClientConnection client, ConnectionManager manager)
         {
             if (manager == null) return false;
             foreach (var handler in PacketHandlers)
@@ -66,7 +66,7 @@ namespace LinkupSharp.Modules
 
         #region Handlers
 
-        protected delegate bool PacketHandler(Packet packet, ClientConnection client, ConnectionManager manager);
+        protected delegate bool PacketHandler(Packet packet, IServerSideClientConnection client, ConnectionManager manager);
         private List<Tuple<Type, PacketHandler>> PacketHandlers = new List<Tuple<Type, PacketHandler>>();
 
         protected void RegisterHandler<T>(PacketHandler handler)

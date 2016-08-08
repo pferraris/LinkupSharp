@@ -46,15 +46,15 @@ namespace LinkupSharp
         private static readonly ILog log = LogManager.GetLogger(typeof(ConnectionManager));
 
         private ISessionRepository sessions;
-        private List<ClientConnection> clients;
+        private List<IServerSideClientConnection> clients;
         private List<IChannelListener> listeners;
         private List<IAuthenticator> authenticators;
         private List<IAuthorizer> authorizers;
         private List<IServerModule> modules;
 
         public ISessionRepository Sessions { get { return sessions; } }
-        public IEnumerable<ClientConnection> Clients { get { lock (clients) return clients.Where(x => x.IsAuthenticated).ToArray(); } }
-        public IEnumerable<ClientConnection> Anonymous { get { lock (clients) return clients.Where(x => !x.IsAuthenticated).ToArray(); } }
+        public IEnumerable<IServerSideClientConnection> Clients { get { lock (clients) return clients.Where(x => x.IsAuthenticated).ToArray(); } }
+        public IEnumerable<IServerSideClientConnection> Anonymous { get { lock (clients) return clients.Where(x => !x.IsAuthenticated).ToArray(); } }
         public IEnumerable<IChannelListener> Listeners { get { return listeners.ToArray(); } }
         public IEnumerable<IAuthenticator> Authenticators { get { return authenticators.ToArray(); } }
         public IEnumerable<IAuthorizer> Authorizers { get { return authorizers.ToArray(); } }
@@ -63,7 +63,7 @@ namespace LinkupSharp
         public ConnectionManager()
         {
             sessions = new MemorySessionRepository();
-            clients = new List<ClientConnection>();
+            clients = new List<IServerSideClientConnection>();
             listeners = new List<IChannelListener>();
             authenticators = new List<IAuthenticator>();
             authorizers = new List<IAuthorizer>();
@@ -76,7 +76,7 @@ namespace LinkupSharp
             ClearAuthenticators();
             ClearModules();
             foreach (var client in clients.ToArray())
-                client.Disconnect(Reasons.ServerRequest);
+                client.Disconnect();
         }
 
         #region Listeners
@@ -167,10 +167,10 @@ namespace LinkupSharp
                 RemoveAuthenticator(authenticator);
         }
 
-        public bool Authenticate(ClientConnection client, SignIn signIn)
+        public bool Authenticate(IServerSideClientConnection client, SignIn signIn)
         {
             foreach (var authenticator in Authenticators)
-                if (client.Authenticate(authenticator.Authenticate(signIn)))
+                if (client.SetSession(authenticator.Authenticate(signIn)))
                     return true;
             return false;
         }
@@ -195,7 +195,7 @@ namespace LinkupSharp
                 RemoveAuthorizer(authorizer);
         }
 
-        public bool IsAuthorized(ClientConnection client, object[] roles)
+        public bool IsAuthorized(IServerSideClientConnection client, object[] roles)
         {
             if (!authorizers.Any()) return true;
             foreach (var authorizer in Authorizers)
@@ -240,7 +240,7 @@ namespace LinkupSharp
 
         private void listener_ClientConnected(object sender, ClientChannelEventArgs e)
         {
-            ClientConnection client = new ClientConnection();
+            IServerSideClientConnection client = new ServerSideClientConnection();
             client.SignInRequired += client_SignInRequired;
             client.SignOutRequired += client_SignOutRequired;
             client.RestoreSessionRequired += client_RestoreSessionRequired;
@@ -250,12 +250,11 @@ namespace LinkupSharp
             if (!clients.Contains(client))
                 lock (clients)
                     clients.Add(client);
-            client.SendConnected();
         }
 
         void client_Disconnected(object sender, DisconnectedEventArgs e)
         {
-            ClientConnection client = sender as ClientConnection;
+            var client = sender as IServerSideClientConnection;
             client.SignInRequired -= client_SignInRequired;
             client.SignOutRequired -= client_SignOutRequired;
             client.RestoreSessionRequired -= client_RestoreSessionRequired;
@@ -270,7 +269,7 @@ namespace LinkupSharp
 
         private void client_SignInRequired(object sender, SignInEventArgs e)
         {
-            ClientConnection client = sender as ClientConnection;
+            var client = sender as IServerSideClientConnection;
             if (client.IsAuthenticated) client.CloseSession(client.Session);
             if (Authenticate(client, e.SignIn))
             {
@@ -283,7 +282,7 @@ namespace LinkupSharp
 
         private void client_SignOutRequired(object sender, SessionEventArgs e)
         {
-            ClientConnection client = sender as ClientConnection;
+            var client = sender as IServerSideClientConnection;
             if (client.CloseSession(e.Session))
             {
                 if (sessions.Contains(e.Session.Token))
@@ -294,12 +293,12 @@ namespace LinkupSharp
 
         void client_RestoreSessionRequired(object sender, SessionEventArgs e)
         {
-            ClientConnection client = sender as ClientConnection;
+            var client = sender as IServerSideClientConnection;
             if (sessions.Contains(e.Session.Token))
             {
-                Session session = sessions.Get(e.Session.Token);
-                if (session.Id == e.Session.Id)
-                    if (client.Authenticate(session))
+                Session original = sessions.Get(e.Session.Token);
+                if (original.Id == e.Session.Id)
+                    if (client.SetSession(original))
                     {
                         OnClientConnected(client, client.Id);
                         return;
@@ -310,15 +309,16 @@ namespace LinkupSharp
 
         private void client_PacketReceived(object sender, PacketEventArgs e)
         {
+            var client = sender as IServerSideClientConnection;
             foreach (var module in Modules)
-                if (module.Process(e.Packet, sender as ClientConnection, this))
+                if (module.Process(e.Packet, client, this))
                     return;
 
             if (e.Packet.Recipient == null)
                 Broadcast(e.Packet);
             else
-                foreach (var client in Clients.Where(x => x.Id == e.Packet.Recipient))
-                    client.Send(e.Packet);
+                foreach (var other in Clients.Where(x => x.Id == e.Packet.Recipient))
+                    other.Send(e.Packet);
         }
 
         private void Broadcast(Packet packet)
@@ -331,24 +331,17 @@ namespace LinkupSharp
 
         #region Events
 
-        public event EventHandler<ClientConnectionEventArgs> ClientConnected;
-        public event EventHandler<ClientConnectionEventArgs> ClientDisconnected;
+        public event EventHandler<ServerSideClientConnectionEventArgs> ClientConnected;
+        public event EventHandler<ServerSideClientConnectionEventArgs> ClientDisconnected;
 
-        protected virtual void OnClientConnected(ClientConnection client, Id id)
+        protected virtual void OnClientConnected(IServerSideClientConnection client, Id id)
         {
-            if (ClientConnected != null)
-                ClientConnected(this, new ClientConnectionEventArgs(client, id));
+            ClientConnected?.Invoke(this, new ServerSideClientConnectionEventArgs(client, id));
         }
 
-        protected virtual void OnClientDisconnected(ClientConnection client, Id id)
+        protected virtual void OnClientDisconnected(IServerSideClientConnection client, Id id)
         {
-            if (ClientDisconnected != null)
-                ClientDisconnected(this, new ClientConnectionEventArgs(client, id));
-        }
-
-        public void AddListener(string v, object certificatePfx)
-        {
-            throw new NotImplementedException();
+            ClientDisconnected?.Invoke(this, new ServerSideClientConnectionEventArgs(client, id));
         }
 
         #endregion Events

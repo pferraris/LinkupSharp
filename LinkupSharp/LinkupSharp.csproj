@@ -51,6 +51,8 @@
     <Reference Include="System.Net.Http" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="IClientConnection.cs" />
+    <Compile Include="IServerSideClientConnection.cs" />
     <Compile Include="Security\Authentication\SignedOut.cs" />
     <Compile Include="Security\Authentication\SignedIn.cs" />
     <Compile Include="Security\Authentication\AuthenticationFailed.cs" />
@@ -71,7 +73,8 @@
     <Compile Include="Channels\WebSocketServerChannel.cs" />
     <Compile Include="Channels\WebSocketClientChannel.cs" />
     <Compile Include="ClientConnection.cs" />
-    <Compile Include="ClientConnectionEventArgs.cs" />
+    <Compile Include="ServerSideClientConnection.cs" />
+    <Compile Include="ServerSideClientConnectionEventArgs.cs" />
     <Compile Include="Disconnected.cs" />
     <Compile Include="DisconnectedEventArgs.cs" />
     <Compile Include="Connected.cs" />
@@ -87,7 +90,6 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="Serializers\IPacketSerializer.cs" />
-    <Compile Include="Modules\SessionModule.cs" />
     <Compile Include="Modules\ClientModule.cs" />
     <Compile Include="Modules\ServerModule.cs" />
     <Compile Include="Packet.cs" />

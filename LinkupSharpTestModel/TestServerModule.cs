@@ -13,7 +13,7 @@ namespace LinkupSharpTestModel
         }
 
         [Authenticated]
-        private bool HandleMessage(Packet packet, ClientConnection client, ConnectionManager manager)
+        private bool HandleMessage(Packet packet, IServerSideClientConnection client, ConnectionManager manager)
         {
             if ((packet.Recipient != null) && (manager.Clients.Any(x => x.Id == packet.Recipient)))
                 foreach (var recipient in manager.Clients.Where(x => x.Id == packet.Recipient))
@@ -35,7 +35,7 @@ namespace LinkupSharpTestModel
             manager.ClientDisconnected -= SendClients;
         }
 
-        private void SendClients(object sender, ClientConnectionEventArgs e)
+        private void SendClients(object sender, ServerSideClientConnectionEventArgs e)
         {
             var clients = (sender as ConnectionManager).Clients;
             foreach (var client in clients)

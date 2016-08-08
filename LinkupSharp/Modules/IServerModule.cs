@@ -33,6 +33,6 @@ namespace LinkupSharp.Modules
     {
         void OnAdded(ConnectionManager manager);
         void OnRemoved(ConnectionManager manager);
-        bool Process(Packet packet, ClientConnection client, ConnectionManager manager);
+        bool Process(Packet packet, IServerSideClientConnection client, ConnectionManager manager);
     }
 }

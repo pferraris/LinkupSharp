@@ -12,13 +12,13 @@ namespace LinkupSharpTestModel
             RegisterHandler<Message>(HandleMessage);
         }
 
-        private bool HandleContacts(Packet packet, ClientConnection client)
+        private bool HandleContacts(Packet packet, IClientConnection client)
         {
             Console.WriteLine($"{client.Id} => Contacts: {string.Join<Id>("; ", packet.GetContent<Id[]>())}");
             return true;
         }
 
-        private bool HandleMessage(Packet packet, ClientConnection client)
+        private bool HandleMessage(Packet packet, IClientConnection client)
         {
             Console.WriteLine($"{client.Id} => {packet.GetContent<Message>().Text}");
             return true;

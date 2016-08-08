@@ -39,7 +39,7 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace LinkupSharp
 {
-    public class ClientConnection
+    public class ClientConnection : IClientConnection
     {
         public IClientChannel Channel { get; private set; }
         public Session Session { get; private set; }
@@ -48,19 +48,47 @@ namespace LinkupSharp
         public bool IsAuthenticated { get { return Session != null; } }
 
         private Disconnected disconnected;
-        private bool serverSide;
 
         public ClientConnection()
         {
             IsConnected = false;
-            sessionModule = new SessionModule();
             Session = null;
             modules = new List<IClientModule>();
+
+            RegisterHandler<SignedIn>(packet =>
+            {
+                OnSignedIn(packet.GetContent<SignedIn>().Session);
+                return true;
+            });
+
+            RegisterHandler<SignedOut>(packet =>
+            {
+                var signedOut = packet.GetContent<SignedOut>();
+                OnSignedOut(signedOut.Session, signedOut.Current);
+                return true;
+            });
+
+            RegisterHandler<AuthenticationFailed>(packet =>
+            {
+                OnAuthenticationFailed();
+                return true;
+            });
+
+            RegisterHandler<Connected>(packet =>
+            {
+                OnConnected();
+                return true;
+            });
+
+            RegisterHandler<Disconnected>(packet =>
+            {
+                Disconnect(packet.GetContent<Disconnected>().Reason, false);
+                return true;
+            });
         }
 
         #region Modules
 
-        private SessionModule sessionModule;
         private List<IClientModule> modules;
 
         public IEnumerable<IClientModule> Modules { get { return modules.ToArray(); } }
@@ -91,7 +119,7 @@ namespace LinkupSharp
 
         private void Channel_PacketReceived(object sender, PacketEventArgs e)
         {
-            if (sessionModule.Process(e.Packet, this))
+            if (Process(e.Packet))
                 return;
 
             foreach (var module in Modules)
@@ -119,7 +147,6 @@ namespace LinkupSharp
 
         public void SignIn(SignIn signIn)
         {
-            serverSide = false;
             Send(signIn);
         }
 
@@ -131,37 +158,6 @@ namespace LinkupSharp
         public void RestoreSession(Session session)
         {
             Send(new RestoreSession(session));
-        }
-
-        internal void SendConnected()
-        {
-            IsConnected = true;
-            Send(new Connected());
-        }
-
-        internal bool Authenticate(Session session)
-        {
-            if (session == null) return false;
-            serverSide = true;
-            Session = session;
-            Send(new SignedIn(session));
-            return true;
-        }
-
-        internal bool CloseSession(Session session)
-        {
-            if (session.Id == Id)
-            {
-                if (session.Token == Session.Token)
-                {
-                    Session = null;
-                    Send(new SignedOut(session, true));
-                }
-                else
-                    Send(new SignedOut(session, false));
-                return true;
-            }
-            return false;
         }
 
         #endregion Authentication
@@ -180,7 +176,7 @@ namespace LinkupSharp
         {
             if (Channel != null)
             {
-                if ((!serverSide) && (Session != null))
+                if (Session != null)
                     packet.Sender = Session.Id;
                 Channel.Send(packet);
             }
@@ -241,13 +237,10 @@ namespace LinkupSharp
 
         public void Disconnect()
         {
-            if (serverSide)
-                Disconnect(Reasons.ServerRequest);
-            else
-                Disconnect(Reasons.ClientRequest);
+            Disconnect(Reasons.ClientRequest);
         }
 
-        internal void Disconnect(Reasons reason, bool sendDisconnected = true)
+        private void Disconnect(Reasons reason, bool sendDisconnected = true)
         {
             if (Channel != null)
             {
@@ -261,9 +254,6 @@ namespace LinkupSharp
 
         #region Events
 
-        internal event EventHandler<SignInEventArgs> SignInRequired;
-        internal event EventHandler<SessionEventArgs> SignOutRequired;
-        internal event EventHandler<SessionEventArgs> RestoreSessionRequired;
         public event EventHandler<EventArgs> Connected;
         public event EventHandler<EventArgs> SignedIn;
         public event EventHandler<EventArgs> SignedOut;
@@ -284,21 +274,6 @@ namespace LinkupSharp
         {
             IsConnected = true;
             Connected?.Invoke(this, EventArgs.Empty);
-        }
-
-        protected internal virtual void OnSignInRequired(SignIn signIn)
-        {
-            SignInRequired?.Invoke(this, new SignInEventArgs(signIn));
-        }
-
-        protected internal virtual void OnSignOutRequired(SignOut signOut)
-        {
-            SignOutRequired?.Invoke(this, new SessionEventArgs(signOut.Session));
-        }
-
-        protected internal void OnRestoreSessionRequired(Session session)
-        {
-            RestoreSessionRequired?.Invoke(this, new SessionEventArgs(session));
         }
 
         protected internal virtual void OnSignedIn(Session session)
@@ -324,6 +299,32 @@ namespace LinkupSharp
         }
 
         #endregion Events
+
+        #region Packet Handlers
+
+        private delegate bool PacketHandler(Packet packet);
+        private List<Tuple<Type, PacketHandler>> packetHandlers = new List<Tuple<Type, PacketHandler>>();
+
+        private bool Process(Packet packet)
+        {
+            foreach (var handler in packetHandlers)
+                if (packet.Is(handler.Item1))
+                    if (handler.Item2(packet))
+                        return true;
+            return false;
+        }
+
+        private void RegisterHandler<T>(PacketHandler handler)
+        {
+            RegisterHandler(typeof(T), handler);
+        }
+
+        private void RegisterHandler(Type type, PacketHandler handler)
+        {
+            packetHandlers.Add(Tuple.Create(type, handler));
+        }
+
+        #endregion Packet Handlers
 
     }
 }
