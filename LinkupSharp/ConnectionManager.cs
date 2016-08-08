@@ -53,8 +53,8 @@ namespace LinkupSharp
         private List<IServerModule> modules;
 
         public ISessionRepository Sessions { get { return sessions; } }
-        public IEnumerable<IServerSideClientConnection> Clients { get { lock (clients) return clients.Where(x => x.IsAuthenticated).ToArray(); } }
-        public IEnumerable<IServerSideClientConnection> Anonymous { get { lock (clients) return clients.Where(x => !x.IsAuthenticated).ToArray(); } }
+        public IEnumerable<IServerSideClientConnection> Clients { get { lock (clients) return clients.Where(x => x.IsSignedIn).ToArray(); } }
+        public IEnumerable<IServerSideClientConnection> Anonymous { get { lock (clients) return clients.Where(x => !x.IsSignedIn).ToArray(); } }
         public IEnumerable<IChannelListener> Listeners { get { return listeners.ToArray(); } }
         public IEnumerable<IAuthenticator> Authenticators { get { return authenticators.ToArray(); } }
         public IEnumerable<IAuthorizer> Authorizers { get { return authorizers.ToArray(); } }
@@ -263,14 +263,14 @@ namespace LinkupSharp
             if (clients.Contains(client))
                 lock (clients)
                     clients.Remove(client);
-            if (client.IsAuthenticated)
+            if (client.IsSignedIn)
                 OnClientDisconnected(client, client.Id);
         }
 
         private void client_SignInRequired(object sender, SignInEventArgs e)
         {
             var client = sender as IServerSideClientConnection;
-            if (client.IsAuthenticated) client.CloseSession(client.Session);
+            if (client.IsSignedIn) client.CloseSession(client.Session);
             if (Authenticate(client, e.SignIn))
             {
                 sessions.Add(client.Session);

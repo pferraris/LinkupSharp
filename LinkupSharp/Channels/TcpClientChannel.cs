@@ -154,7 +154,7 @@ namespace LinkupSharp.Channels
             }
         }
 
-        public async Task Send(Packet packet)
+        public async Task<bool> Send(Packet packet)
         {
             if (active)
                 try
@@ -162,12 +162,14 @@ namespace LinkupSharp.Channels
                     byte[] buffer = serializer.Serialize(packet);
                     await stream.WriteAsync(buffer, 0, buffer.Length);
                     stream.Flush();
+                    return true;
                 }
                 catch (Exception ex)
                 {
                     log.Error("Sending error", ex);
                     await Close();
                 }
+            return false;
         }
 
         public async Task Close()

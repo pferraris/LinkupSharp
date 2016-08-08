@@ -13,7 +13,7 @@ namespace LinkupSharp
         public IClientChannel Channel { get; private set; }
         public Session Session { get; internal set; }
         public Id Id { get { return Session?.Id; } }
-        public bool IsAuthenticated { get { return Session != null; } }
+        public bool IsSignedIn { get { return Session != null; } }
         public bool IsConnected { get; private set; }
 
         public event EventHandler<SignInEventArgs> SignInRequired;
@@ -22,7 +22,7 @@ namespace LinkupSharp
         public event EventHandler<DisconnectedEventArgs> Disconnected;
         public event EventHandler<PacketEventArgs> PacketReceived;
 
-        internal ServerSideClientConnection()
+        public ServerSideClientConnection()
         {
             RegisterHandler<SignIn>(packet =>
             {
@@ -47,6 +47,11 @@ namespace LinkupSharp
                 Disconnect(packet.GetContent<Disconnected>().Reason, false);
                 return true;
             });
+        }
+
+        public void Dispose()
+        {
+            Disconnect();
         }
 
         public bool SetSession(Session session)

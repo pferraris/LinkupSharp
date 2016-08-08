@@ -145,11 +145,14 @@ namespace LinkupSharp.Channels
             }
         }
 
-        public async Task Send(Packet packet)
+        public async Task<bool> Send(Packet packet)
         {
             if (serverSide)
+            {
                 lock (pending)
                     pending.Enqueue(packet);
+                return true;
+            }
             else if (active)
             {
                 try
@@ -163,6 +166,7 @@ namespace LinkupSharp.Channels
                         if (!response.IsSuccessStatusCode)
                             throw new InvalidOperationException($"StatusCode: {response.StatusCode}");
                     }
+                    return true;
                 }
                 catch (Exception ex)
                 {
@@ -170,6 +174,7 @@ namespace LinkupSharp.Channels
                     await Close();
                 }
             }
+            return false;
         }
 
         public async Task Close()

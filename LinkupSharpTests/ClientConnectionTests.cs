@@ -53,7 +53,7 @@ namespace LinkupSharpTests
             {
                 client.Connect(endpoint).Wait();
                 client.SignIn("pablo@tests").Wait();
-                Assert.IsTrue(client.IsAuthenticated);
+                Assert.IsTrue(client.IsSignedIn);
                 Console.WriteLine(client.Id);
             }
         }
@@ -66,7 +66,7 @@ namespace LinkupSharpTests
             {
                 client.Connect(endpoint).Wait();
                 client.SignIn("pablo@other").Wait();
-                Assert.IsFalse(client.IsAuthenticated);
+                Assert.IsFalse(client.IsSignedIn);
             }
         }
 

@@ -5,13 +5,13 @@ using LinkupSharp.Security.Authentication;
 
 namespace LinkupSharp
 {
-    public interface IServerSideClientConnection
+    public interface IServerSideClientConnection : IDisposable
     {
         IClientChannel Channel { get; }
         Session Session { get; }
         Id Id { get; }
-        bool IsAuthenticated { get; }
         bool IsConnected { get; }
+        bool IsSignedIn { get; }
 
         event EventHandler<SignInEventArgs> SignInRequired;
         event EventHandler<SessionEventArgs> RestoreSessionRequired;

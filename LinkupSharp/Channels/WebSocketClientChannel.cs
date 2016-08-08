@@ -108,7 +108,7 @@ namespace LinkupSharp.Channels
             Task.Factory.StartNew(OnClosed);
         }
 
-        public async Task Send(Packet packet)
+        public async Task<bool> Send(Packet packet)
         {
             if ((cancel != null) && (!cancel.IsCancellationRequested))
             {
@@ -116,6 +116,7 @@ namespace LinkupSharp.Channels
                 {
                     byte[] buffer = serializer.Serialize(packet);
                     await socket.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Binary, true, cancel.Token);
+                    return true;
                 }
                 catch (Exception ex)
                 {
@@ -123,6 +124,7 @@ namespace LinkupSharp.Channels
                     await Close();
                 }
             }
+            return false;
         }
 
         public async Task Close()

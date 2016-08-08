@@ -36,16 +36,26 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace LinkupSharp
 {
     public class ClientConnection : IClientConnection
     {
+        private ManualResetEvent connectEvent = new ManualResetEvent(false);
+        private ManualResetEvent disconnectEvent = new ManualResetEvent(false);
+        private ManualResetEvent signInEvent = new ManualResetEvent(false);
+        private ManualResetEvent signOutEvent = new ManualResetEvent(false);
+        private ManualResetEvent receiveEvent = new ManualResetEvent(false);
+
+        private Queue<Packet> packets = new Queue<Packet>();
+
         public IClientChannel Channel { get; private set; }
         public Session Session { get; private set; }
         public Id Id { get { return Session != null ? Session.Id : null; } }
         public bool IsConnected { get; private set; }
-        public bool IsAuthenticated { get { return Session != null; } }
+        public bool IsSignedIn { get { return Session != null; } }
 
         private Disconnected disconnected;
 
@@ -54,6 +64,8 @@ namespace LinkupSharp
             IsConnected = false;
             Session = null;
             modules = new List<IClientModule>();
+
+            #region Packet Handlers
 
             RegisterHandler<SignedIn>(packet =>
             {
@@ -85,6 +97,22 @@ namespace LinkupSharp
                 Disconnect(packet.GetContent<Disconnected>().Reason, false);
                 return true;
             });
+
+            #endregion Packet Handlers
+
+        }
+
+        public void Dispose()
+        {
+            Disconnect().Wait();
+            connectEvent.Dispose();
+            disconnectEvent.Dispose();
+            signInEvent.Dispose();
+            signOutEvent.Dispose();
+            connectEvent = null;
+            disconnectEvent = null;
+            signInEvent = null;
+            signOutEvent = null;
         }
 
         #region Modules
@@ -140,54 +168,64 @@ namespace LinkupSharp
 
         #region Authentication
 
-        public void SignIn(Id id)
+        public async Task<bool> SignIn(Id id)
         {
-            SignIn(new SignIn(id));
+            return await SignIn(new SignIn(id));
         }
 
-        public void SignIn(SignIn signIn)
+        public async Task<bool> SignIn(SignIn signIn)
         {
-            Send(signIn);
+            signInEvent.Reset();
+            await Send(signIn);
+            signInEvent.WaitOne();
+            return IsSignedIn;
         }
 
-        public void SignOut(Session session)
+        public async Task<bool> RestoreSession(Session session)
         {
-            Send(new SignOut(session));
+            signInEvent.Reset();
+            await Send(new RestoreSession(session));
+            signInEvent.WaitOne();
+            return IsSignedIn;
         }
 
-        public void RestoreSession(Session session)
+        public async Task<bool> SignOut(Session session)
         {
-            Send(new RestoreSession(session));
+            signOutEvent.Reset();
+            await Send(new SignOut(session));
+            signOutEvent.WaitOne();
+            return !IsSignedIn;
         }
 
         #endregion Authentication
 
         #region Methods
 
-        public void Send(object content)
+        public async Task<bool> Send(object content)
         {
             if (content is Packet)
-                Send(content as Packet);
+                return await Send(content as Packet);
             else
-                Send(new Packet(content));
+                return await Send(new Packet(content));
         }
 
-        public void Send(Packet packet)
+        public async Task<bool> Send(Packet packet)
         {
             if (Channel != null)
             {
                 if (Session != null)
                     packet.Sender = Session.Id;
-                Channel.Send(packet);
+                return await Channel.Send(packet);
             }
+            return false;
         }
 
-        public void Connect(string endpoint, X509Certificate2 certificate = null)
+        public async Task<bool> Connect(string endpoint, X509Certificate2 certificate = null)
         {
-            Connect<JsonPacketSerializer>(endpoint, certificate);
+            return await Connect<JsonPacketSerializer>(endpoint, certificate);
         }
 
-        public void Connect<T>(string endpoint, X509Certificate2 certificate = null) where T : IPacketSerializer, new()
+        public async Task<bool> Connect<T>(string endpoint, X509Certificate2 certificate = null) where T : IPacketSerializer, new()
         {
             IClientChannel channel = null;
             var uri = new Uri(endpoint);
@@ -212,42 +250,65 @@ namespace LinkupSharp
                     channel.Certificate = certificate;
                 channel.SetSerializer(new T());
                 channel.Endpoint = endpoint;
-                Connect(channel);
+                return await Connect(channel);
             }
+            return false;
         }
 
-        public void Connect(IClientChannel channel)
+        public async Task<bool> Connect(IClientChannel channel)
         {
             if (Channel == null)
             {
+                connectEvent.Reset();
                 Channel = channel;
                 Channel.PacketReceived += Channel_PacketReceived;
                 Channel.Closed += Channel_Closed;
                 try
                 {
-                    Channel.Open().Wait();
+                    await Channel.Open();
+                    connectEvent.WaitOne();
                 }
-                catch (Exception ex)
+                catch
                 {
                     Channel = null;
-                    throw ex;
+                    connectEvent.Set();
                 }
             }
+            return false;
         }
 
-        public void Disconnect()
+        public async Task<bool> Disconnect()
         {
-            Disconnect(Reasons.ClientRequest);
+            return await Disconnect(Reasons.ClientRequest);
         }
 
-        private void Disconnect(Reasons reason, bool sendDisconnected = true)
+        private async Task<bool> Disconnect(Reasons reason, bool sendDisconnected = true)
         {
             if (Channel != null)
             {
+                disconnectEvent.Reset();
                 disconnected = new Disconnected(reason);
-                if (sendDisconnected) Send(disconnected);
-                Channel.Close();
+                if (sendDisconnected) await Send(disconnected);
+                await Channel.Close();
+                disconnectEvent.WaitOne();
+                return !IsConnected;
             }
+            return false;
+        }
+
+        public async Task<Packet> Receive()
+        {
+            if (IsConnected)
+            {
+                if (packets.Count == 0)
+                    receiveEvent.Reset();
+                await Task.Factory.StartNew(() =>
+                {
+                    receiveEvent.WaitOne();
+                });
+                return packets.Dequeue();
+            }
+            return null;
         }
 
         #endregion Methods
@@ -267,34 +328,41 @@ namespace LinkupSharp
             Channel.Closed -= Channel_Closed;
             Channel = null;
             IsConnected = false;
+            disconnectEvent.Set();
             Disconnected?.Invoke(this, new DisconnectedEventArgs(disconnected));
         }
 
         protected internal virtual void OnConnected()
         {
             IsConnected = true;
+            connectEvent.Set();
             Connected?.Invoke(this, EventArgs.Empty);
         }
 
         protected internal virtual void OnSignedIn(Session session)
         {
             Session = session;
+            signInEvent.Set();
             SignedIn?.Invoke(this, EventArgs.Empty);
         }
 
         protected internal virtual void OnSignedOut(Session session, bool current)
         {
             if (current) Session = null;
+            signOutEvent.Set();
             SignedOut?.Invoke(this, EventArgs.Empty);
         }
 
         protected internal virtual void OnAuthenticationFailed()
         {
+            signInEvent.Set();
             AuthenticationFailed?.Invoke(this, EventArgs.Empty);
         }
 
         protected internal virtual void OnPacketReceived(PacketEventArgs e)
         {
+            packets.Enqueue(e.Packet);
+            receiveEvent.Set();
             PacketReceived?.Invoke(this, e);
         }
 

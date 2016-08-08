@@ -106,7 +106,7 @@ namespace LinkupSharp.Channels
             await Task.FromResult<object>(null);
         }
 
-        public async Task Send(Packet packet)
+        public async Task<bool> Send(Packet packet)
         {
             if (socket.ReadyState == WebSocketState.Open)
             {
@@ -114,6 +114,7 @@ namespace LinkupSharp.Channels
                 {
                     byte[] buffer = serializer.Serialize(packet);
                     socket.SendAsync(buffer, null);
+                    return true;
                 }
                 catch (Exception ex)
                 {
@@ -121,6 +122,7 @@ namespace LinkupSharp.Channels
                     await Close();
                 }
             }
+            return false;
         }
 
         public async Task Close()

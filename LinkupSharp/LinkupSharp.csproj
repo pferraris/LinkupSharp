@@ -101,7 +101,6 @@
     <Compile Include="Serializers\JsonPacketSerializer.cs" />
     <Compile Include="Serializers\TokenizedPacketSerializer.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="SyncClientConnection.cs" />
   </ItemGroup>
   <ItemGroup />
   <ItemGroup>

@@ -43,6 +43,6 @@ namespace LinkupSharp.Channels
         void SetSerializer(IPacketSerializer serializer);
         Task Open();
         Task Close();
-        Task Send(Packet packet);
+        Task<bool> Send(Packet packet);
     }
 }

@@ -2,7 +2,7 @@
 
 namespace LinkupSharpTestModel
 {
-    public class TestClient : SyncClientConnection
+    public class TestClient : ClientConnection
     {
     }
 }

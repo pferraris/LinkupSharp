@@ -6,16 +6,17 @@ using LinkupSharp.Modules;
 using LinkupSharp.Security;
 using LinkupSharp.Security.Authentication;
 using LinkupSharp.Serializers;
+using System.Threading.Tasks;
 
 namespace LinkupSharp
 {
-    public interface IClientConnection
+    public interface IClientConnection : IDisposable
     {
         IClientChannel Channel { get; }
         Session Session { get; }
         Id Id { get; }
-        bool IsAuthenticated { get; }
         bool IsConnected { get; }
+        bool IsSignedIn { get; }
         IEnumerable<IClientModule> Modules { get; }
 
         event EventHandler<EventArgs> Connected;
@@ -27,15 +28,16 @@ namespace LinkupSharp
 
         void AddModule(IClientModule module);
         void RemoveModule(IClientModule module);
-        void Connect(string endpoint, X509Certificate2 certificate = null);
-        void Connect<T>(string endpoint, X509Certificate2 certificate = null) where T : IPacketSerializer, new();
-        void Connect(IClientChannel channel);
-        void Disconnect();
-        void SignIn(Id id);
-        void SignIn(SignIn signIn);
-        void RestoreSession(Session session);
-        void SignOut(Session session);
-        void Send(object content);
-        void Send(Packet packet);
+
+        Task<bool> Connect(string endpoint, X509Certificate2 certificate = null);
+        Task<bool> Connect<T>(string endpoint, X509Certificate2 certificate = null) where T : IPacketSerializer, new();
+        Task<bool> Connect(IClientChannel channel);
+        Task<bool> Disconnect();
+        Task<bool> SignIn(Id id);
+        Task<bool> SignIn(SignIn signIn);
+        Task<bool> RestoreSession(Session session);
+        Task<bool> SignOut(Session session);
+        Task<bool> Send(object content);
+        Task<bool> Send(Packet packet);
     }
 }
