@@ -94,7 +94,7 @@ namespace LinkupSharp.Serializers
                 while ((pos = buffer.LastIndexOf(token.First(), start)) >= 0)
                 {
                     start = pos - 1;
-                    if (buffer.Skip(pos).SequenceEqual(token))
+                    if (buffer.Skip(pos).Take(token.Length).SequenceEqual(token))
                         return true;
                 }
                 return false;
