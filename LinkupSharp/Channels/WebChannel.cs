@@ -41,9 +41,9 @@ using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
 {
-    public class WebClientChannel : IClientChannel
+    public class WebChannel : IChannel
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(WebClientChannel));
+        private static readonly ILog log = LogManager.GetLogger(typeof(WebChannel));
         private IPacketSerializer serializer;
         private Task readingTask;
         private bool active;
@@ -57,12 +57,12 @@ namespace LinkupSharp.Channels
         public string Endpoint { get; set; }
         public X509Certificate2 Certificate { get; set; }
 
-        static WebClientChannel()
+        static WebChannel()
         {
             ServicePointManager.DefaultConnectionLimit = int.MaxValue;
         }
 
-        internal WebClientChannel(string id)
+        internal WebChannel(string id)
         {
             Id = id;
             serverSide = true;
@@ -71,7 +71,7 @@ namespace LinkupSharp.Channels
             pending = new Queue<Packet>();
         }
 
-        public WebClientChannel()
+        public WebChannel()
         {
             WebRequest.DefaultWebProxy.Credentials = CredentialCache.DefaultNetworkCredentials;
             ServicePointManager.ServerCertificateValidationCallback = CertificateValidation;

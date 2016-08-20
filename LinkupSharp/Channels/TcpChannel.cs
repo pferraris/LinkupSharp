@@ -40,9 +40,9 @@ using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
 {
-    public class TcpClientChannel : IClientChannel
+    public class TcpChannel : IChannel
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(TcpClientChannel));
+        private static readonly ILog log = LogManager.GetLogger(typeof(TcpChannel));
         private static readonly byte[] token = new byte[] { 0x0007, 0x000C, 0x000B };
 
         private Task readingTask;
@@ -55,12 +55,12 @@ namespace LinkupSharp.Channels
         public string Endpoint { get; set; }
         public X509Certificate2 Certificate { get; set; }
 
-        public TcpClientChannel()
+        public TcpChannel()
         {
             serverSide = false;
         }
 
-        internal TcpClientChannel(TcpClient socket, X509Certificate2 certificate)
+        internal TcpChannel(TcpClient socket, X509Certificate2 certificate)
         {
             Endpoint = socket.Client.RemoteEndPoint.ToString();
             Certificate = certificate;

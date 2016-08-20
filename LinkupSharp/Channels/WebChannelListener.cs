@@ -43,7 +43,7 @@ namespace LinkupSharp.Channels
         private static readonly ILog log = LogManager.GetLogger(typeof(WebChannelListener));
 
         private HttpListener listener;
-        private Dictionary<string, WebClientChannel> connections;
+        private Dictionary<string, WebChannel> connections;
         private IPacketSerializer serializer;
 
         public string Endpoint { get; set; }
@@ -66,7 +66,7 @@ namespace LinkupSharp.Channels
                 serializer = new JsonPacketSerializer();
             if (string.IsNullOrEmpty(Endpoint)) return;
             if (listener != null) Stop();
-            connections = new Dictionary<string, WebClientChannel>();
+            connections = new Dictionary<string, WebChannel>();
             listener = new HttpListener(Certificate);
             var endpoint = Endpoint.Replace("0.0.0.0", "+");
             listener.Prefixes.Add(endpoint);
@@ -90,7 +90,7 @@ namespace LinkupSharp.Channels
                 lock (connections)
                     if (!connections.ContainsKey(id))
                     {
-                        var client = new WebClientChannel(id);
+                        var client = new WebChannel(id);
                         client.SetSerializer(serializer);
                         client.Closed += client_Closed;
                         connections.Add(id, client);
@@ -134,7 +134,7 @@ namespace LinkupSharp.Channels
 
         void client_Closed(object sender, EventArgs e)
         {
-            var client = sender as WebClientChannel;
+            var client = sender as WebChannel;
             if (connections.ContainsKey(client.Id))
                 connections.Remove(client.Id);
         }
@@ -143,12 +143,12 @@ namespace LinkupSharp.Channels
 
         #region Events
 
-        public event EventHandler<ClientChannelEventArgs> ClientConnected;
+        public event EventHandler<ChannelEventArgs> ChannelConnected;
 
-        private void OnClientConnected(IClientChannel clientChannel)
+        private void OnClientConnected(IChannel clientChannel)
         {
             if (clientChannel == null) return;
-            ClientConnected?.Invoke(this, new ClientChannelEventArgs(clientChannel));
+            ChannelConnected?.Invoke(this, new ChannelEventArgs(clientChannel));
         }
 
         #endregion Events

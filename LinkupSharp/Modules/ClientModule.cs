@@ -39,10 +39,10 @@ namespace LinkupSharp.Modules
 
         #region Implements IClientModule
 
-        public virtual void OnAdded(IClientConnection client) { }
-        public virtual void OnRemoved(IClientConnection client) { }
+        public virtual void OnAdded(ILinkupClient client) { }
+        public virtual void OnRemoved(ILinkupClient client) { }
 
-        public bool Process(Packet packet, IClientConnection client)
+        public bool Process(Packet packet, ILinkupClient client)
         {
             foreach (var handler in PacketHandlers)
                 if (packet.Is(handler.Item1))
@@ -59,7 +59,7 @@ namespace LinkupSharp.Modules
 
         #region Handlers
 
-        protected delegate bool PacketHandler(Packet packet, IClientConnection client);
+        protected delegate bool PacketHandler(Packet packet, ILinkupClient client);
         private List<Tuple<Type, PacketHandler>> PacketHandlers = new List<Tuple<Type, PacketHandler>>();
 
         protected void RegisterHandler<T>(PacketHandler handler)

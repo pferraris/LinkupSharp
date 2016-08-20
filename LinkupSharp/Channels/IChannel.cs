@@ -34,7 +34,7 @@ using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
 {
-    public interface IClientChannel : IDisposable
+    public interface IChannel : IDisposable
     {
         event EventHandler<PacketEventArgs> PacketReceived;
         event EventHandler<EventArgs> Closed;

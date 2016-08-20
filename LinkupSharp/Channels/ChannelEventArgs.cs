@@ -27,17 +27,17 @@
 */
 #endregion License
 
-namespace LinkupSharp
-{
-    public class ServerSideClientConnectionEventArgs
-    {
-        public IServerSideClientConnection Client { get; private set; }
-        public Id Id { get; private set; }
+using System;
 
-        public ServerSideClientConnectionEventArgs(IServerSideClientConnection client, Id id)
+namespace LinkupSharp.Channels
+{
+    public class ChannelEventArgs : EventArgs
+    {
+        public IChannel Channel { get; private set; }
+
+        public ChannelEventArgs(IChannel channel)
         {
-            Client = client;
-            Id = id;
+            Channel = channel;
         }
     }
 }

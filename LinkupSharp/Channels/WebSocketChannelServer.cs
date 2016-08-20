@@ -36,9 +36,9 @@ using System.Threading.Tasks;
 
 namespace LinkupSharp.Channels
 {
-    internal class WebSocketServerChannel : IClientChannel
+    internal class WebSocketChannelServer : IChannel
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketServerChannel));
+        private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketChannelServer));
         private static readonly byte[] token = new byte[] { 0x0007, 0x000C, 0x000B };
 
         private WebSocket socket;
@@ -47,7 +47,7 @@ namespace LinkupSharp.Channels
         public string Endpoint { get; set; }
         public X509Certificate2 Certificate { get; set; }
 
-        internal WebSocketServerChannel(WebSocket socket)
+        internal WebSocketChannelServer(WebSocket socket)
         {
             this.socket = socket;
             socket.OnOpen += Socket_OnOpen;

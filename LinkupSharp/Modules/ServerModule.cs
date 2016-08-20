@@ -40,22 +40,22 @@ namespace LinkupSharp.Modules
 
         #region Implements IServerPacketInterceptor
 
-        public virtual void OnAdded(ConnectionManager manager) { }
+        public virtual void OnAdded(LinkupServer server) { }
 
-        public virtual void OnRemoved(ConnectionManager manager) { }
+        public virtual void OnRemoved(LinkupServer server) { }
 
-        public bool Process(Packet packet, IServerSideClientConnection client, ConnectionManager manager)
+        public bool Process(Packet packet, IServerSideConnection connection, LinkupServer server)
         {
-            if (manager == null) return false;
+            if (server == null) return false;
             foreach (var handler in PacketHandlers)
                 if (packet.Is(handler.Item1))
                 {
                     var attributes = handler.Item2.Method.GetCustomAttributes(typeof(AuthenticatedAttribute), true);
-                    if ((!attributes.Any()) || (client.Session != null))
+                    if ((!attributes.Any()) || (connection.Session != null))
                     {
                         var roles = attributes.OfType<AuthorizedAttribute>().SelectMany(x => x.Roles).ToArray();
-                        if ((!roles.Any()) || (manager.IsAuthorized(client, roles)))
-                            if (handler.Item2(packet, client, manager))
+                        if ((!roles.Any()) || (server.IsAuthorized(connection, roles)))
+                            if (handler.Item2(packet, connection, server))
                                 return true;
                     }
                 }
@@ -66,7 +66,7 @@ namespace LinkupSharp.Modules
 
         #region Handlers
 
-        protected delegate bool PacketHandler(Packet packet, IServerSideClientConnection client, ConnectionManager manager);
+        protected delegate bool PacketHandler(Packet packet, IServerSideConnection connection, LinkupServer server);
         private List<Tuple<Type, PacketHandler>> PacketHandlers = new List<Tuple<Type, PacketHandler>>();
 
         protected void RegisterHandler<T>(PacketHandler handler)

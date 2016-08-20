@@ -129,11 +129,11 @@ namespace LinkupSharp.Channels
             }
         }
 
-        private IClientChannel CreateClient(TcpClient socket)
+        private IChannel CreateClient(TcpClient socket)
         {
             try
             {
-                var channel = new TcpClientChannel(socket, Certificate);
+                var channel = new TcpChannel(socket, Certificate);
                 channel.SetSerializer(serializer);
                 return channel;
             }
@@ -149,12 +149,12 @@ namespace LinkupSharp.Channels
 
         #region Events
 
-        public event EventHandler<ClientChannelEventArgs> ClientConnected;
+        public event EventHandler<ChannelEventArgs> ChannelConnected;
 
-        private void OnClientConnected(IClientChannel clientChannel)
+        private void OnClientConnected(IChannel clientChannel)
         {
             if (clientChannel == null) return;
-            ClientConnected?.Invoke(this, new ClientChannelEventArgs(clientChannel));
+            ChannelConnected?.Invoke(this, new ChannelEventArgs(clientChannel));
         }
 
         #endregion Events

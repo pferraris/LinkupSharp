@@ -88,7 +88,7 @@ namespace LinkupSharp.Channels
                 {
                     WebSocketContext webSocketContext = null;
                     webSocketContext = listenerContext.AcceptWebSocket(null);
-                    var channel = new WebSocketServerChannel(webSocketContext.WebSocket);
+                    var channel = new WebSocketChannelServer(webSocketContext.WebSocket);
                     channel.SetSerializer(serializer);
                     OnClientConnected(channel);
                 }
@@ -110,12 +110,12 @@ namespace LinkupSharp.Channels
 
         #region Events
 
-        public event EventHandler<ClientChannelEventArgs> ClientConnected;
+        public event EventHandler<ChannelEventArgs> ChannelConnected;
 
-        private void OnClientConnected(IClientChannel clientChannel)
+        private void OnClientConnected(IChannel clientChannel)
         {
             if (clientChannel == null) return;
-            ClientConnected?.Invoke(this, new ClientChannelEventArgs(clientChannel));
+            ChannelConnected?.Invoke(this, new ChannelEventArgs(clientChannel));
         }
 
         #endregion Events

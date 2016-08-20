@@ -35,7 +35,7 @@ namespace LinkupSharp.Channels
 {
     public interface IChannelListener
     {
-        event EventHandler<ClientChannelEventArgs> ClientConnected;
+        event EventHandler<ChannelEventArgs> ChannelConnected;
         string Endpoint { get; set; }
         X509Certificate2 Certificate { get; set; }
         void SetSerializer(IPacketSerializer serializer);

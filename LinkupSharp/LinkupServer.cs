@@ -41,29 +41,29 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace LinkupSharp
 {
-    public class ConnectionManager : IDisposable
+    public class LinkupServer : IDisposable
     {
-        private static readonly ILog log = LogManager.GetLogger(typeof(ConnectionManager));
+        private static readonly ILog log = LogManager.GetLogger(typeof(LinkupServer));
 
         private ISessionRepository sessions;
-        private List<IServerSideClientConnection> clients;
+        private List<IServerSideConnection> connections;
         private List<IChannelListener> listeners;
         private List<IAuthenticator> authenticators;
         private List<IAuthorizer> authorizers;
         private List<IServerModule> modules;
 
         public ISessionRepository Sessions { get { return sessions; } }
-        public IEnumerable<IServerSideClientConnection> Clients { get { lock (clients) return clients.Where(x => x.IsSignedIn).ToArray(); } }
-        public IEnumerable<IServerSideClientConnection> Anonymous { get { lock (clients) return clients.Where(x => !x.IsSignedIn).ToArray(); } }
+        public IEnumerable<IServerSideConnection> Connections { get { lock (connections) return connections.Where(x => x.IsSignedIn).ToArray(); } }
+        public IEnumerable<IServerSideConnection> Anonymous { get { lock (connections) return connections.Where(x => !x.IsSignedIn).ToArray(); } }
         public IEnumerable<IChannelListener> Listeners { get { return listeners.ToArray(); } }
         public IEnumerable<IAuthenticator> Authenticators { get { return authenticators.ToArray(); } }
         public IEnumerable<IAuthorizer> Authorizers { get { return authorizers.ToArray(); } }
         public IEnumerable<IServerModule> Modules { get { return modules.ToArray(); } }
 
-        public ConnectionManager()
+        public LinkupServer()
         {
             sessions = new MemorySessionRepository();
-            clients = new List<IServerSideClientConnection>();
+            connections = new List<IServerSideConnection>();
             listeners = new List<IChannelListener>();
             authenticators = new List<IAuthenticator>();
             authorizers = new List<IAuthorizer>();
@@ -75,8 +75,8 @@ namespace LinkupSharp
             ClearListeners();
             ClearAuthenticators();
             ClearModules();
-            foreach (var client in clients.ToArray())
-                client.Disconnect();
+            foreach (var connection in connections.ToArray())
+                connection.Disconnect();
         }
 
         #region Listeners
@@ -87,7 +87,7 @@ namespace LinkupSharp
             if (!listeners.Contains(listener))
             {
                 listeners.Add(listener);
-                listener.ClientConnected += listener_ClientConnected;
+                listener.ChannelConnected += listener_ChannelConnected;
                 listener.Start();
             }
         }
@@ -131,7 +131,7 @@ namespace LinkupSharp
             if (listener == null) throw new ArgumentNullException("Listener cannot be null.");
             if (listeners.Contains(listener))
             {
-                listener.ClientConnected -= listener_ClientConnected;
+                listener.ChannelConnected -= listener_ChannelConnected;
                 listener.Stop();
                 listeners.Remove(listener);
             }
@@ -167,10 +167,10 @@ namespace LinkupSharp
                 RemoveAuthenticator(authenticator);
         }
 
-        public bool Authenticate(IServerSideClientConnection client, SignIn signIn)
+        public bool Authenticate(IServerSideConnection connection, SignIn signIn)
         {
             foreach (var authenticator in Authenticators)
-                if (client.SetSession(authenticator.Authenticate(signIn)))
+                if (connection.SetSession(authenticator.Authenticate(signIn)))
                     return true;
             return false;
         }
@@ -195,11 +195,11 @@ namespace LinkupSharp
                 RemoveAuthorizer(authorizer);
         }
 
-        public bool IsAuthorized(IServerSideClientConnection client, object[] roles)
+        public bool IsAuthorized(IServerSideConnection connection, object[] roles)
         {
             if (!authorizers.Any()) return true;
             foreach (var authorizer in Authorizers)
-                if (authorizer.IsAuthorized(client.Session, roles))
+                if (authorizer.IsAuthorized(connection.Session, roles))
                     return true;
             return false;
         }
@@ -236,112 +236,112 @@ namespace LinkupSharp
 
         #endregion Modules
 
-        #region Clients
+        #region Connections
 
-        private void listener_ClientConnected(object sender, ClientChannelEventArgs e)
+        private void listener_ChannelConnected(object sender, ChannelEventArgs e)
         {
-            IServerSideClientConnection client = new ServerSideClientConnection();
-            client.SignInRequired += client_SignInRequired;
-            client.SignOutRequired += client_SignOutRequired;
-            client.RestoreSessionRequired += client_RestoreSessionRequired;
-            client.PacketReceived += client_PacketReceived;
-            client.Disconnected += client_Disconnected;
-            client.Connect(e.ClientChannel);
-            if (!clients.Contains(client))
-                lock (clients)
-                    clients.Add(client);
+            IServerSideConnection connection = new ServerSideConnection();
+            connection.SignInRequired += connection_SignInRequired;
+            connection.SignOutRequired += connection_SignOutRequired;
+            connection.RestoreSessionRequired += connection_RestoreSessionRequired;
+            connection.PacketReceived += connection_PacketReceived;
+            connection.Disconnected += connection_Disconnected;
+            connection.Connect(e.Channel);
+            if (!connections.Contains(connection))
+                lock (connections)
+                    connections.Add(connection);
         }
 
-        void client_Disconnected(object sender, DisconnectedEventArgs e)
+        void connection_Disconnected(object sender, DisconnectedEventArgs e)
         {
-            var client = sender as IServerSideClientConnection;
-            client.SignInRequired -= client_SignInRequired;
-            client.SignOutRequired -= client_SignOutRequired;
-            client.RestoreSessionRequired -= client_RestoreSessionRequired;
-            client.PacketReceived -= client_PacketReceived;
-            client.Disconnected -= client_Disconnected;
-            if (clients.Contains(client))
-                lock (clients)
-                    clients.Remove(client);
-            if (client.IsSignedIn)
-                OnClientDisconnected(client, client.Id);
+            var connection = sender as IServerSideConnection;
+            connection.SignInRequired -= connection_SignInRequired;
+            connection.SignOutRequired -= connection_SignOutRequired;
+            connection.RestoreSessionRequired -= connection_RestoreSessionRequired;
+            connection.PacketReceived -= connection_PacketReceived;
+            connection.Disconnected -= connection_Disconnected;
+            if (connections.Contains(connection))
+                lock (connections)
+                    connections.Remove(connection);
+            if (connection.IsSignedIn)
+                OnClientDisconnected(connection, connection.Id);
         }
 
-        private void client_SignInRequired(object sender, SignInEventArgs e)
+        private void connection_SignInRequired(object sender, SignInEventArgs e)
         {
-            var client = sender as IServerSideClientConnection;
-            if (client.IsSignedIn) client.CloseSession(client.Session);
-            if (Authenticate(client, e.SignIn))
+            var connection = sender as IServerSideConnection;
+            if (connection.IsSignedIn) connection.CloseSession(connection.Session);
+            if (Authenticate(connection, e.SignIn))
             {
-                sessions.Add(client.Session);
-                OnClientConnected(client, client.Id);
+                sessions.Add(connection.Session);
+                OnClientConnected(connection, connection.Id);
                 return;
             }
-            client.Send(new AuthenticationFailed(e.SignIn.Id));
+            connection.Send(new AuthenticationFailed(e.SignIn.Id));
         }
 
-        private void client_SignOutRequired(object sender, SessionEventArgs e)
+        private void connection_SignOutRequired(object sender, SessionEventArgs e)
         {
-            var client = sender as IServerSideClientConnection;
-            if (client.CloseSession(e.Session))
+            var connection = sender as IServerSideConnection;
+            if (connection.CloseSession(e.Session))
             {
                 if (sessions.Contains(e.Session.Token))
                     sessions.Remove(e.Session);
-                OnClientDisconnected(client, e.Session.Id);
+                OnClientDisconnected(connection, e.Session.Id);
             }
         }
 
-        void client_RestoreSessionRequired(object sender, SessionEventArgs e)
+        void connection_RestoreSessionRequired(object sender, SessionEventArgs e)
         {
-            var client = sender as IServerSideClientConnection;
+            var connection = sender as IServerSideConnection;
             if (sessions.Contains(e.Session.Token))
             {
                 Session original = sessions.Get(e.Session.Token);
                 if (original.Id == e.Session.Id)
-                    if (client.SetSession(original))
+                    if (connection.SetSession(original))
                     {
-                        OnClientConnected(client, client.Id);
+                        OnClientConnected(connection, connection.Id);
                         return;
                     }
             }
-            client.Send(new AuthenticationFailed(e.Session.Id));
+            connection.Send(new AuthenticationFailed(e.Session.Id));
         }
 
-        private void client_PacketReceived(object sender, PacketEventArgs e)
+        private void connection_PacketReceived(object sender, PacketEventArgs e)
         {
-            var client = sender as IServerSideClientConnection;
+            var connection = sender as IServerSideConnection;
             foreach (var module in Modules)
-                if (module.Process(e.Packet, client, this))
+                if (module.Process(e.Packet, connection, this))
                     return;
 
             if (e.Packet.Recipient == null)
                 Broadcast(e.Packet);
             else
-                foreach (var other in Clients.Where(x => x.Id == e.Packet.Recipient))
+                foreach (var other in Connections.Where(x => x.Id == e.Packet.Recipient))
                     other.Send(e.Packet);
         }
 
         private void Broadcast(Packet packet)
         {
-            foreach (var client in Clients)
-                client.Send(packet);
+            foreach (var connection in Connections)
+                connection.Send(packet);
         }
 
-        #endregion Clients
+        #endregion Connections
 
         #region Events
 
-        public event EventHandler<ServerSideClientConnectionEventArgs> ClientConnected;
-        public event EventHandler<ServerSideClientConnectionEventArgs> ClientDisconnected;
+        public event EventHandler<ServerSideConnectionEventArgs> ClientConnected;
+        public event EventHandler<ServerSideConnectionEventArgs> ClientDisconnected;
 
-        protected virtual void OnClientConnected(IServerSideClientConnection client, Id id)
+        protected virtual void OnClientConnected(IServerSideConnection connection, Id id)
         {
-            ClientConnected?.Invoke(this, new ServerSideClientConnectionEventArgs(client, id));
+            ClientConnected?.Invoke(this, new ServerSideConnectionEventArgs(connection, id));
         }
 
-        protected virtual void OnClientDisconnected(IServerSideClientConnection client, Id id)
+        protected virtual void OnClientDisconnected(IServerSideConnection connection, Id id)
         {
-            ClientDisconnected?.Invoke(this, new ServerSideClientConnectionEventArgs(client, id));
+            ClientDisconnected?.Invoke(this, new ServerSideConnectionEventArgs(connection, id));
         }
 
         #endregion Events

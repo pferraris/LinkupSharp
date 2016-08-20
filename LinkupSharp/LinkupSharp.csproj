@@ -51,8 +51,8 @@
     <Reference Include="System.Net.Http" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="IClientConnection.cs" />
-    <Compile Include="IServerSideClientConnection.cs" />
+    <Compile Include="ILinkupClient.cs" />
+    <Compile Include="IServerSideConnection.cs" />
     <Compile Include="Security\Authentication\SignedOut.cs" />
     <Compile Include="Security\Authentication\SignedIn.cs" />
     <Compile Include="Security\Authentication\AuthenticationFailed.cs" />
@@ -66,19 +66,19 @@
     <Compile Include="Security\Authentication\IAuthenticator.cs" />
     <Compile Include="Security\MemorySessionRepository.cs" />
     <Compile Include="Channels\IChannelListener.cs" />
-    <Compile Include="Channels\IClientChannel.cs" />
+    <Compile Include="Channels\IChannel.cs" />
     <Compile Include="Channels\WebChannelListener.cs" />
-    <Compile Include="Channels\WebClientChannel.cs" />
+    <Compile Include="Channels\WebChannel.cs" />
     <Compile Include="Channels\WebSocketChannelListener.cs" />
-    <Compile Include="Channels\WebSocketServerChannel.cs" />
-    <Compile Include="Channels\WebSocketClientChannel.cs" />
-    <Compile Include="ClientConnection.cs" />
-    <Compile Include="ServerSideClientConnection.cs" />
-    <Compile Include="ServerSideClientConnectionEventArgs.cs" />
+    <Compile Include="Channels\WebSocketChannelServer.cs" />
+    <Compile Include="Channels\WebSocketChannel.cs" />
+    <Compile Include="LinkupClient.cs" />
+    <Compile Include="ServerSideConnection.cs" />
+    <Compile Include="ServerSideConnectionEventArgs.cs" />
     <Compile Include="Disconnected.cs" />
     <Compile Include="DisconnectedEventArgs.cs" />
     <Compile Include="Connected.cs" />
-    <Compile Include="ConnectionManager.cs" />
+    <Compile Include="LinkupServer.cs" />
     <Compile Include="Security\Session.cs" />
     <Compile Include="Security\Authentication\SignInEventArgs.cs" />
     <Compile Include="Security\Authorization\AuthorizedAttribute.cs" />
@@ -94,9 +94,9 @@
     <Compile Include="Modules\ServerModule.cs" />
     <Compile Include="Packet.cs" />
     <Compile Include="PacketEventArgs.cs" />
-    <Compile Include="Channels\ClientChannelEventArgs.cs" />
+    <Compile Include="Channels\ChannelEventArgs.cs" />
     <Compile Include="Channels\TcpChannelListener.cs" />
-    <Compile Include="Channels\TcpClientChannel.cs" />
+    <Compile Include="Channels\TcpChannel.cs" />
     <Compile Include="Id.cs" />
     <Compile Include="Serializers\JsonPacketSerializer.cs" />
     <Compile Include="Serializers\TokenizedPacketSerializer.cs" />

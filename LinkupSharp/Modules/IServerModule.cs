@@ -31,8 +31,8 @@ namespace LinkupSharp.Modules
 {
     public interface IServerModule
     {
-        void OnAdded(ConnectionManager manager);
-        void OnRemoved(ConnectionManager manager);
-        bool Process(Packet packet, IServerSideClientConnection client, ConnectionManager manager);
+        void OnAdded(LinkupServer server);
+        void OnRemoved(LinkupServer server);
+        bool Process(Packet packet, IServerSideConnection connection, LinkupServer server);
     }
 }

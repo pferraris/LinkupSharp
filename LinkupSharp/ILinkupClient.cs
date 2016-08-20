@@ -10,9 +10,9 @@ using System.Threading.Tasks;
 
 namespace LinkupSharp
 {
-    public interface IClientConnection : IDisposable
+    public interface ILinkupClient : IDisposable
     {
-        IClientChannel Channel { get; }
+        IChannel Channel { get; }
         Session Session { get; }
         Id Id { get; }
         bool IsConnected { get; }
@@ -31,7 +31,7 @@ namespace LinkupSharp
 
         Task<bool> Connect(string endpoint, X509Certificate2 certificate = null);
         Task<bool> Connect<T>(string endpoint, X509Certificate2 certificate = null) where T : IPacketSerializer, new();
-        Task<bool> Connect(IClientChannel channel);
+        Task<bool> Connect(IChannel channel);
         Task<bool> Disconnect();
         Task<bool> SignIn(Id id);
         Task<bool> SignIn(SignIn signIn);

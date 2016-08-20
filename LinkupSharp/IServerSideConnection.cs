@@ -5,9 +5,9 @@ using LinkupSharp.Security.Authentication;
 
 namespace LinkupSharp
 {
-    public interface IServerSideClientConnection : IDisposable
+    public interface IServerSideConnection : IDisposable
     {
-        IClientChannel Channel { get; }
+        IChannel Channel { get; }
         Session Session { get; }
         Id Id { get; }
         bool IsConnected { get; }
@@ -19,7 +19,7 @@ namespace LinkupSharp
         event EventHandler<DisconnectedEventArgs> Disconnected;
         event EventHandler<PacketEventArgs> PacketReceived;
 
-        void Connect(IClientChannel channel);
+        void Connect(IChannel channel);
         void Disconnect();
         bool SetSession(Session session);
         bool CloseSession(Session session);

@@ -41,7 +41,7 @@ using System.Threading.Tasks;
 
 namespace LinkupSharp
 {
-    public class ClientConnection : IClientConnection
+    public class LinkupClient : ILinkupClient
     {
         private ManualResetEvent connectEvent = new ManualResetEvent(false);
         private ManualResetEvent disconnectEvent = new ManualResetEvent(false);
@@ -51,7 +51,7 @@ namespace LinkupSharp
 
         private Queue<Packet> packets = new Queue<Packet>();
 
-        public IClientChannel Channel { get; private set; }
+        public IChannel Channel { get; private set; }
         public Session Session { get; private set; }
         public Id Id { get { return Session != null ? Session.Id : null; } }
         public bool IsConnected { get; private set; }
@@ -59,7 +59,7 @@ namespace LinkupSharp
 
         private Disconnected disconnected;
 
-        public ClientConnection()
+        public LinkupClient()
         {
             IsConnected = false;
             Session = null;
@@ -227,21 +227,21 @@ namespace LinkupSharp
 
         public async Task<bool> Connect<T>(string endpoint, X509Certificate2 certificate = null) where T : IPacketSerializer, new()
         {
-            IClientChannel channel = null;
+            IChannel channel = null;
             var uri = new Uri(endpoint);
             switch (uri.Scheme.ToLower())
             {
                 case "tcp":
                 case "ssl":
-                    channel = new TcpClientChannel();
+                    channel = new TcpChannel();
                     break;
                 case "http":
                 case "https":
-                    channel = new WebClientChannel();
+                    channel = new WebChannel();
                     break;
                 case "ws":
                 case "wss":
-                    channel = new WebSocketClientChannel();
+                    channel = new WebSocketChannel();
                     break;
             }
             if (channel != null)
@@ -255,7 +255,7 @@ namespace LinkupSharp
             return false;
         }
 
-        public async Task<bool> Connect(IClientChannel channel)
+        public async Task<bool> Connect(IChannel channel)
         {
             if (Channel == null)
             {

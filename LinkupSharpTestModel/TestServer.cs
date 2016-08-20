@@ -4,7 +4,7 @@ using System.Security.Cryptography.X509Certificates;
 
 namespace LinkupSharpTestModel
 {
-    public class TestServer : ConnectionManager
+    public class TestServer : LinkupServer
     {
         public TestServer(string endpoint, X509Certificate2 certificate = null)
             : this(new string[] { endpoint }, certificate)

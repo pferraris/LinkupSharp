@@ -31,8 +31,8 @@ namespace LinkupSharp.Modules
 {
     public interface IClientModule
     {
-        void OnAdded(IClientConnection client);
-        void OnRemoved(IClientConnection client);
-        bool Process(Packet packet, IClientConnection client);
+        void OnAdded(ILinkupClient client);
+        void OnRemoved(ILinkupClient client);
+        bool Process(Packet packet, ILinkupClient client);
     }
 }

@@ -6,11 +6,11 @@ using System.Collections.Generic;
 
 namespace LinkupSharp
 {
-    public class ServerSideClientConnection : IServerSideClientConnection
+    public class ServerSideConnection : IServerSideConnection
     {
         private Disconnected disconnected;
 
-        public IClientChannel Channel { get; private set; }
+        public IChannel Channel { get; private set; }
         public Session Session { get; internal set; }
         public Id Id { get { return Session?.Id; } }
         public bool IsSignedIn { get { return Session != null; } }
@@ -22,7 +22,7 @@ namespace LinkupSharp
         public event EventHandler<DisconnectedEventArgs> Disconnected;
         public event EventHandler<PacketEventArgs> PacketReceived;
 
-        public ServerSideClientConnection()
+        public ServerSideConnection()
         {
             RegisterHandler<SignIn>(packet =>
             {
@@ -78,7 +78,7 @@ namespace LinkupSharp
             return false;
         }
 
-        public void Connect(IClientChannel channel)
+        public void Connect(IChannel channel)
         {
             if (Channel == null)
             {
