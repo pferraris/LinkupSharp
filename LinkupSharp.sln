@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.25123.0
+VisualStudioVersion = 14.0.25420.1
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LinkupSharp", "LinkupSharp\LinkupSharp.csproj", "{83453473-BEC5-4D8C-B203-01C937297EB6}"
 EndProject
@@ -14,6 +14,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LinkupSharpTestModel", "LinkupSharpTestModel\LinkupSharpTestModel.csproj", "{55E38A51-E4D9-41E1-BCC9-1FEC9F910934}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{EC7BD95E-17F5-47AA-955C-E8480A66B05C}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "LinkupSharpHttpListener", "LinkupSharpHttpListener\LinkupSharpHttpListener.csproj", "{5D291CE2-AF6C-4072-9D18-389520C4D869}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -41,6 +43,10 @@ Global
 		{55E38A51-E4D9-41E1-BCC9-1FEC9F910934}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{55E38A51-E4D9-41E1-BCC9-1FEC9F910934}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{55E38A51-E4D9-41E1-BCC9-1FEC9F910934}.Release|Any CPU.Build.0 = Release|Any CPU
+		{5D291CE2-AF6C-4072-9D18-389520C4D869}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{5D291CE2-AF6C-4072-9D18-389520C4D869}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{5D291CE2-AF6C-4072-9D18-389520C4D869}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{5D291CE2-AF6C-4072-9D18-389520C4D869}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

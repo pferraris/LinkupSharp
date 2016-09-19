@@ -29,8 +29,8 @@
 
 using LinkupSharp.Serializers;
 using log4net;
-using SocketHttpListener.Net;
-using SocketHttpListener.Net.WebSockets;
+using LinkupSharpHttpListener.Net;
+using LinkupSharpHttpListener.Net.WebSockets;
 using System;
 using System.Security.Cryptography.X509Certificates;
 
