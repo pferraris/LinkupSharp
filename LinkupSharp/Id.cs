@@ -58,7 +58,7 @@ namespace LinkupSharp
         public override bool Equals(object obj)
         {
             if ((obj == null) || !(obj is Id)) return false;
-            return (ToString().Equals(obj.ToString()));
+            return (ToString().Equals(obj.ToString(), StringComparison.OrdinalIgnoreCase));
         }
 
         public override int GetHashCode()
