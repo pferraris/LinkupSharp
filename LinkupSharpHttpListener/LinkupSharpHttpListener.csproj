@@ -7,8 +7,8 @@
     <ProjectGuid>{5D291CE2-AF6C-4072-9D18-389520C4D869}</ProjectGuid>
     <OutputType>Library</OutputType>
     <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>SocketHttpListener</RootNamespace>
-    <AssemblyName>SocketHttpListener</AssemblyName>
+    <RootNamespace>LinkupSharpHttpListener</RootNamespace>
+    <AssemblyName>LinkupSharpHttpListener</AssemblyName>
     <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
   </PropertyGroup>
