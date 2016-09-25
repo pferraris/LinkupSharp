@@ -60,6 +60,10 @@ namespace LinkupSharp
         public IEnumerable<IAuthorizer> Authorizers { get { return authorizers.ToArray(); } }
         public IEnumerable<IServerModule> Modules { get { return modules.ToArray(); } }
 
+        public bool AllowDirectMessages { get; private set; }
+        public bool AllowBroadcast { get; private set; }
+        public bool AllowAnonymousMessages { get; private set; }
+
         public LinkupServer()
         {
             sessions = new MemorySessionRepository();
@@ -68,6 +72,9 @@ namespace LinkupSharp
             authenticators = new List<IAuthenticator>();
             authorizers = new List<IAuthorizer>();
             modules = new List<IServerModule>();
+            AllowDirectMessages = false;
+            AllowBroadcast = false;
+            AllowAnonymousMessages = false;
         }
 
         public void Dispose()
@@ -310,15 +317,24 @@ namespace LinkupSharp
         private void connection_PacketReceived(object sender, PacketEventArgs e)
         {
             var connection = sender as IServerSideConnection;
+
             foreach (var module in Modules)
                 if (module.Process(e.Packet, connection, this))
                     return;
 
+            if (!connection.IsSignedIn && !AllowAnonymousMessages)
+                return;
+
             if (e.Packet.Recipient == null)
-                Broadcast(e.Packet);
-            else
-                foreach (var other in Connections.Where(x => x.Id == e.Packet.Recipient))
-                    other.Send(e.Packet);
+            {
+                if (AllowBroadcast)
+                    Broadcast(e.Packet);
+            }
+            else if (AllowDirectMessages)
+            {
+                foreach (var recipient in Connections.Where(x => x.Id == e.Packet.Recipient))
+                    recipient.Send(e.Packet);
+            }
         }
 
         private void Broadcast(Packet packet)
