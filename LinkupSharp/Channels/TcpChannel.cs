@@ -65,6 +65,8 @@ namespace LinkupSharp.Channels
             Endpoint = socket.Client.RemoteEndPoint.ToString();
             Certificate = certificate;
             serverSide = true;
+            if (serializer == null)
+                SetSerializer(new JsonPacketSerializer());
             SetSocket(socket);
         }
 

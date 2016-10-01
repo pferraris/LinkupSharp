@@ -29,12 +29,12 @@
 
 using LinkupSharp.Serializers;
 using log4net;
-using LinkupSharpHttpListener.Net;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading.Tasks;
+using WebSocketSharp.Net;
 
 namespace LinkupSharp.Channels
 {
@@ -43,6 +43,8 @@ namespace LinkupSharp.Channels
         private static readonly ILog log = LogManager.GetLogger(typeof(WebChannelListener));
 
         private HttpListener listener;
+        private bool listening;
+        private Task listenerTask;
         private Dictionary<string, WebChannel> connections;
         private IPacketSerializer serializer;
 
@@ -67,17 +69,34 @@ namespace LinkupSharp.Channels
             if (string.IsNullOrEmpty(Endpoint)) return;
             if (listener != null) Stop();
             connections = new Dictionary<string, WebChannel>();
-            listener = new HttpListener(Certificate);
+            listener = new HttpListener();
+            listener.SslConfiguration.ServerCertificate = Certificate;
             var endpoint = Endpoint.Replace("0.0.0.0", "+");
             listener.Prefixes.Add(endpoint);
-            listener.OnContext = x => Task.Factory.StartNew(() => ProcessRequest(x));
             listener.Start();
+            listening = true;
+            listenerTask = Task.Factory.StartNew(Listen);
         }
 
         public void Stop()
         {
-            listener.Stop();
-            listener = null;
+            if (listener != null)
+            {
+                listening = false;
+                listener.Stop();
+                listenerTask.Wait();
+                listenerTask.Dispose();
+                listener = null;
+            }
+        }
+
+        private void Listen()
+        {
+            while (listening)
+            {
+                var ares = listener.BeginGetContext(x => ProcessRequest(listener.EndGetContext(x)), null);
+                ares.AsyncWaitHandle.WaitOne();
+            }
         }
 
         private void ProcessRequest(HttpListenerContext context)

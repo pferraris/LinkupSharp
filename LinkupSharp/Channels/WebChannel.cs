@@ -69,6 +69,8 @@ namespace LinkupSharp.Channels
             inactivityTime = 5000;
             inactivityTimer = new Timer(state => Close().Wait(), null, inactivityTime, Timeout.Infinite);
             pending = new Queue<Packet>();
+            if (serializer == null)
+                SetSerializer(new JsonPacketSerializer());
         }
 
         public WebChannel()

@@ -25,7 +25,7 @@ namespace LinkupSharpDemo
                 client2.AddModule(new TestClientModule());
 
                 Console.WriteLine("Connecting clients...");
-                client1.Connect("ssl://localhost:5650/", Resources.CertificateCer).Wait();
+                client1.Connect("https://localhost:5651/", Resources.CertificateCer).Wait();
                 client2.Connect("wss://localhost:5652/", Resources.CertificateCer).Wait();
 
                 Console.WriteLine("Signing in clients...");

@@ -29,10 +29,11 @@
 
 using LinkupSharp.Serializers;
 using log4net;
-using LinkupSharpHttpListener.Net;
-using LinkupSharpHttpListener.Net.WebSockets;
 using System;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading.Tasks;
+using WebSocketSharp.Net;
+using WebSocketSharp.Net.WebSockets;
 
 namespace LinkupSharp.Channels
 {
@@ -40,6 +41,8 @@ namespace LinkupSharp.Channels
     {
         private static readonly ILog log = LogManager.GetLogger(typeof(WebSocketChannelListener));
         private HttpListener listener;
+        private bool listening;
+        private Task listenerTask;
         private IPacketSerializer serializer;
 
         public string Endpoint { get; set; }
@@ -62,21 +65,35 @@ namespace LinkupSharp.Channels
                 serializer = new JsonPacketSerializer();
             if (string.IsNullOrEmpty(Endpoint)) return;
             if (listener != null) Stop();
-            listener = new HttpListener(Certificate);
+            listener = new HttpListener();
+            listener.SslConfiguration.ServerCertificate = Certificate;
             var endpoint = Endpoint.Replace("0.0.0.0", "+");
             endpoint = endpoint.Replace("wss://", "https://");
             endpoint = endpoint.Replace("ws://", "http://");
             listener.Prefixes.Add(endpoint);
-            listener.OnContext = x => ProcessRequest(x);
             listener.Start();
+            listening = true;
+            listenerTask = Task.Factory.StartNew(Listen);
         }
 
         public void Stop()
         {
             if (listener != null)
             {
+                listening = false;
                 listener.Stop();
+                listenerTask.Wait();
+                listenerTask.Dispose();
                 listener = null;
+            }
+        }
+
+        private void Listen()
+        {
+            while (listening)
+            {
+                var ares = listener.BeginGetContext(x => ProcessRequest(listener.EndGetContext(x)), null);
+                ares.AsyncWaitHandle.WaitOne();
             }
         }
 
@@ -86,9 +103,9 @@ namespace LinkupSharp.Channels
             {
                 if (listenerContext.Request.IsWebSocketRequest)
                 {
-                    WebSocketContext webSocketContext = null;
+                    HttpListenerWebSocketContext webSocketContext = null;
                     webSocketContext = listenerContext.AcceptWebSocket(null);
-                    var channel = new WebSocketChannelServer(webSocketContext.WebSocket);
+                    var channel = new WebSocketChannel(webSocketContext.WebSocket);
                     channel.SetSerializer(serializer);
                     OnClientConnected(channel);
                 }
