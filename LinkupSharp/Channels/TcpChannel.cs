@@ -30,6 +30,7 @@
 using LinkupSharp.Serializers;
 using log4net;
 using System;
+using System.Collections.Concurrent;
 using System.IO;
 using System.Linq;
 using System.Net.Security;
@@ -45,12 +46,14 @@ namespace LinkupSharp.Channels
         private static readonly ILog log = LogManager.GetLogger(typeof(TcpChannel));
         private static readonly byte[] token = new byte[] { 0x0007, 0x000C, 0x000B };
 
-        private Task readingTask;
         private bool active;
+        private Task readingTask;
+        private Task sendingTask;
         private TcpClient socket;
         private IPacketSerializer serializer;
         private Stream stream;
         private bool serverSide;
+        private ConcurrentQueue<SendPacket> sendQueue = new ConcurrentQueue<SendPacket>();
 
         public string Endpoint { get; set; }
         public X509Certificate2 Certificate { get; set; }
@@ -95,6 +98,7 @@ namespace LinkupSharp.Channels
             stream = GetStream();
             active = true;
             readingTask = Task.Factory.StartNew(Read);
+            sendingTask = Task.Factory.StartNew(Send);
         }
 
         private Stream GetStream()
@@ -158,20 +162,45 @@ namespace LinkupSharp.Channels
 
         public async Task<bool> Send(Packet packet)
         {
+            await Task.Yield();
             if (active)
-                try
+            {
+                var sendPacket = new SendPacket
                 {
-                    byte[] buffer = serializer.Serialize(packet);
-                    await stream.WriteAsync(buffer, 0, buffer.Length);
-                    stream.Flush();
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    log.Error("Sending error", ex);
-                    await Close();
-                }
+                    Packet = packet,
+                    Sending = new ManualResetEvent(false)
+                };
+                sendQueue.Enqueue(sendPacket);
+                sendPacket.Sending.WaitOne();
+                return sendPacket.Sent;
+            }
             return false;
+        }
+
+        private void Send()
+        {
+            while (active)
+            {
+                SendPacket sendPacket;
+                if (sendQueue.Count > 0 && sendQueue.TryDequeue(out sendPacket))
+                {
+                    try
+                    {
+                        byte[] buffer = serializer.Serialize(sendPacket.Packet);
+                        stream.WriteAsync(buffer, 0, buffer.Length).Wait();
+                        stream.Flush();
+                        sendPacket.Sent = true;
+                        sendPacket.Sending.Set();
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Error("Sending error", ex);
+                        Close().Wait();
+                    }
+                }
+                else
+                    Thread.Sleep(10);
+            }
         }
 
         public async Task Close()
@@ -183,6 +212,8 @@ namespace LinkupSharp.Channels
                 {
                     await readingTask;
                     readingTask.Dispose();
+                    await sendingTask;
+                    sendingTask.Dispose();
                 }
                 catch { }
                 try

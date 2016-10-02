@@ -30,8 +30,11 @@
 using LinkupSharp.Serializers;
 using log4net;
 using System;
+using System.Collections.Concurrent;
+using System.Diagnostics;
 using System.Net.Security;
 using System.Security.Cryptography.X509Certificates;
+using System.Threading;
 using System.Threading.Tasks;
 using WebSocketSharp;
 
@@ -45,6 +48,9 @@ namespace LinkupSharp.Channels
         private WebSocket socket;
         private IPacketSerializer serializer;
         private bool isServerSide;
+        private bool active;
+        private Task sendingTask;
+        private ConcurrentQueue<SendPacket> sendQueue = new ConcurrentQueue<SendPacket>();
 
         public string Endpoint { get; set; }
         public X509Certificate2 Certificate { get; set; }
@@ -72,6 +78,9 @@ namespace LinkupSharp.Channels
 
         private void Socket_OnClose(object sender, CloseEventArgs e)
         {
+            active = false;
+            sendingTask.Wait();
+            sendingTask.Dispose();
             OnClosed();
         }
 
@@ -117,6 +126,8 @@ namespace LinkupSharp.Channels
             await Task.Yield();
             if (serializer == null)
                 SetSerializer(new JsonPacketSerializer());
+            active = true;
+            sendingTask = Task.Factory.StartNew(Send);
             if (isServerSide)
                 socket.Accept();
             else
@@ -133,21 +144,44 @@ namespace LinkupSharp.Channels
 
         public async Task<bool> Send(Packet packet)
         {
+            await Task.Yield();
             if (socket.ReadyState == WebSocketState.Open)
             {
-                try
+                var sendPacket = new SendPacket
                 {
-                    byte[] buffer = serializer.Serialize(packet);
-                    socket.SendAsync(buffer, null);
-                    return true;
-                }
-                catch (Exception ex)
-                {
-                    log.Error("Sending error", ex);
-                    await Close();
-                }
+                    Packet = packet,
+                    Sending = new ManualResetEvent(false)
+                };
+                sendQueue.Enqueue(sendPacket);
+                sendPacket.Sending.WaitOne();
+                return sendPacket.Sent;
             }
             return false;
+        }
+
+        private void Send()
+        {
+            while (active)
+            {
+                SendPacket sendPacket;
+                if (sendQueue.Count > 0 && sendQueue.TryDequeue(out sendPacket))
+                {
+                    try
+                    {
+                        byte[] buffer = serializer.Serialize(sendPacket.Packet);
+                        socket.Send(buffer);
+                        sendPacket.Sent = true;
+                        sendPacket.Sending.Set();
+                    }
+                    catch (Exception ex)
+                    {
+                        log.Error("Sending error", ex);
+                        Close().Wait();
+                    }
+                }
+                else
+                    Thread.Sleep(10);
+            }
         }
 
         public async Task Close()

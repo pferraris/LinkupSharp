@@ -47,6 +47,7 @@
     </Reference>
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="Channels\SendPacket.cs" />
     <Compile Include="ILinkupClient.cs" />
     <Compile Include="IServerSideConnection.cs" />
     <Compile Include="Security\Authentication\SignedOut.cs" />
