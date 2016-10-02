@@ -79,7 +79,7 @@ namespace LinkupSharp.Channels
         {
             try
             {
-                if (e.Type == Opcode.Close)
+                if (e.IsClose)
                     socket.Close();
                 else
                 {
